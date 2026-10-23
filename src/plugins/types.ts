@@ -13,8 +13,8 @@ export interface GameContext {
   speaker: Speaker;
   sounds: Sounds;
   totalPoints(): number;
-  /** How long a wrong letter stays in its slot before going back (device setting). */
-  wrongLetterMs: number;
+  /** How long the popup after a word stays when it shows a letter pair (device setting). */
+  pairMs: number;
   loadProgress(): unknown;
   /** Saves progress and adds points in one write, so points are never counted twice. */
   commit(progress: unknown, pointsToAdd?: number): void;

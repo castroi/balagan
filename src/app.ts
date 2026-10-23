@@ -150,7 +150,7 @@ export class App {
         speaker: this.speaker,
         sounds: this.sounds,
         totalPoints: () => this.data.points,
-        wrongLetterMs: this.settings.wrongLetterSeconds * 1000,
+        pairMs: this.settings.pairSeconds * 1000,
         loadProgress: () => this.data.progress[plugin.id],
         commit: (progress, pointsToAdd = 0) => {
           if (this.readOnly) return;
