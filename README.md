@@ -16,7 +16,7 @@ npm run test:e2e   # browser smoke tests (first time: npx playwright install chr
 npm run build      # type-check + tests + production build into dist/
 ```
 
-After the first `npm install`, commit the generated `package-lock.json`.
+Commit `package-lock.json` whenever dependencies change (CI uses `npm ci`). Without a local Node setup, run the **Update lockfile** workflow from the Actions tab on your branch.
 
 **Project rules, decisions and the Git workflow (a branch and pull request for every change) are in [`CLAUDE.md`](CLAUDE.md).** Read it before adding a new activity.
 
@@ -26,7 +26,7 @@ After the first `npm install`, commit the generated `package-lock.json`.
 2. In Vercel: **Add New → Project**, import the repository. Vercel detects Vite; keep the defaults.
 3. Every merge to `main` deploys to the live site; every branch gets a preview link. The `build` script runs the type-check and the tests first, so a failing test stops the deploy.
 
-GitHub Actions (`.github/workflows/ci.yml`) also runs the checks on every push and pull request.
+GitHub Actions (`.github/workflows/ci.yml`) runs the checks on every pull request and on `main`. When a browser test fails, the test report is attached to the run as `playwright-report`.
 
 ## Version number
 

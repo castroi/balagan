@@ -1,0 +1,30 @@
+# Regenerates package-lock.json after a dependency change in package.json, for
+# when `npm install` can't be run locally. Run it from the Actions tab
+# ("Update lockfile" → Run workflow → choose the branch); it commits to that branch.
+name: Update lockfile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json is already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Update package-lock.json"
+          git push
