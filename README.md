@@ -6,7 +6,7 @@ First assignment type: **Scrambled Words** (מילים מבולגנות). The wo
 
 ## Run it on your computer
 
-Requires Node.js 22 or newer.
+Requires Node.js 22 (the same version CI and Vercel use).
 
 ```bash
 npm install

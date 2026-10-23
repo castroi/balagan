@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Hebrew writing practice for kids — weekly assignments, no backend.",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "vite",
