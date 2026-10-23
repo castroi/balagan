@@ -11,6 +11,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 - **Only the owner merges**, after CI is green and the preview has been checked on a phone when the change is visible. Why: the owner decides what reaches the kid.
 - Small, focused commits with a clear message saying what changed and why.
 - Run `npm run typecheck`, `npm test` and, for UI changes, `npm run test:e2e` before pushing.
+- Commit `package-lock.json` with every dependency change; CI uses `npm ci`. Why: the same tool versions everywhere, so a tool release can't break the build. If `npm install` can't run locally, use the "Update lockfile" workflow in the Actions tab on your branch (never on `main`; it refuses).
 
 ## Platform decisions
 
@@ -20,7 +21,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Content moves between devices only via the share link hash `#import=1.<base64url>` | The hash is never sent to the server |
 | Keep the Import box on the edit screen | On iPhone, an installed home-screen app has separate storage and can't receive links directly |
 | TypeScript + Vite, no UI framework | A few screens; type checks catch mistakes before the phone |
-| `npm run build` runs type check + unit tests before building | Vercel won't deploy a broken version |
+| `npm run build` runs type check (app, tests and config files) + unit tests before building | Vercel won't deploy a broken version |
 | Offline service worker generated at build time (`build/service-worker.template.js`): caches every built file on install, one cache per build (version = hash of every file's content) | The app opens offline after a single visit; old versions don't pile up |
 | Pages network-first with a 3-second timeout, **no update prompt** | The latest version loads automatically when online; a weak connection doesn't block the kid |
 | Interface in Hebrew, right to left | It's for the kid |

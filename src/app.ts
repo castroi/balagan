@@ -10,8 +10,9 @@ import {
 } from './platform/storage';
 import { createSpeaker, type Speaker } from './platform/tts';
 import { createSounds, type Sounds } from './platform/sounds';
-import { decodeShare, type SharePayload } from './platform/share-codec';
-import { getPlugin, PLUGINS } from './plugins/registry';
+import { type SharePayload } from './platform/share-codec';
+import { readImport, type ImportResult } from './platform/import';
+import { PLUGINS } from './plugins/registry';
 import type { AnyPlugin } from './plugins/types';
 import { renderHome } from './ui/home';
 import { renderEdit } from './ui/edit';
@@ -65,27 +66,9 @@ export class App {
     return Object.keys(assignments).length ? { assignments } : null;
   }
 
-  /** Checks a pasted link/code. Returns an error message, or the usable entries. */
-  readImport(input: string): { error: string } | { entries: { plugin: AnyPlugin; data: unknown }[]; skipped: number } {
-    const result = decodeShare(input);
-    if (!result.ok) {
-      const messages = {
-        empty: 'לא הודבק קישור',
-        invalid: 'הקישור לא תקין או שנחתך. נסו להעתיק אותו שוב.',
-        newer: 'הקישור נוצר בגרסה חדשה יותר של האתר. רעננו את האתר ונסו שוב.',
-      } as const;
-      return { error: messages[result.reason] };
-    }
-    const entries: { plugin: AnyPlugin; data: unknown }[] = [];
-    let skipped = 0;
-    for (const [id, entry] of Object.entries(result.payload.assignments)) {
-      const plugin = getPlugin(id);
-      const data = plugin?.deserialize(entry.d, entry.v) ?? null;
-      if (plugin && data !== null) entries.push({ plugin, data });
-      else skipped++;
-    }
-    if (entries.length === 0) return { error: 'לא נמצאו בקישור משימות שאפשר לפתוח' };
-    return { entries, skipped };
+  /** Checks a pasted link/code (see `readImport`). */
+  readImport(input: string): ImportResult {
+    return readImport(input);
   }
 
   /** Saves imported activities; 'saved' only when all of them were saved. */
