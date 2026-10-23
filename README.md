@@ -7,6 +7,8 @@ Assignment types:
 - **Scrambled Words** (מילים מבולגנות): the word is spoken, the letters are scrambled, and the kid puts them back in order.
 - **Confusing Letters** (אותיות מבלבלות): the same game, with letters that sound alike (ס/צ, ק/כ, א/ע/ה…) mixed into the tray. The parent writes each word followed by its confusing letters, e.g. `כַּעַס ק צ ה א`.
 
+On the edit screen, **הגדרות** sets how long a wrong letter stays in its slot (0.5–3 seconds, default 1.5). It's saved on that device only.
+
 ## Run it on your computer
 
 Requires Node.js 22 (the same version CI and Vercel use).
@@ -40,7 +42,7 @@ The version shown on the edit screen comes from `version` in `package.json`. Cha
 ```
 src/
   core/        Hebrew text handling, shuffle, scoring (pure logic)
-  platform/    storage, share links, text-to-speech, sounds, version
+  platform/    storage, device settings, share links, text-to-speech, sounds, version
   plugins/     assignment types — one folder per type
     registry.ts            list of all types
     shared/letter-game/    letter-tile game shared by both types: round logic, progress, game screen
@@ -69,6 +71,7 @@ Automated tests can't cover these:
 - [ ] Niqqud renders correctly on the tiles, including small tiles in 10-letter words.
 - [ ] Confusing Letters with 15 tiles on the smallest phone you have: all tiles fit without scrolling and are easy to tap.
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
+- [ ] Edit screen → הגדרות: the chosen time for a wrong letter feels right for the kid.
 - [ ] Share link with a full week of both activities (20 words each), sent and opened from WhatsApp, loads both.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.

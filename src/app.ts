@@ -9,6 +9,7 @@ import {
   type SaveResult,
 } from './platform/storage';
 import { createSpeaker, type Speaker } from './platform/tts';
+import { loadSettings, saveSettings, type Settings } from './platform/settings';
 import { createSounds, type Sounds } from './platform/sounds';
 import { type SharePayload } from './platform/share-codec';
 import { readImport, type ImportResult } from './platform/import';
@@ -21,6 +22,7 @@ import { clearToast, toast } from './ui/dialog';
 export class App {
   readonly store: KeyValueStore | null = browserStore();
   data: AppData = loadData(this.store);
+  settings: Settings = loadSettings(this.store);
   readonly speaker: Speaker = createSpeaker();
   readonly sounds: Sounds = createSounds();
   /**
@@ -39,6 +41,17 @@ export class App {
     if (result === 'failed') toast('לא ניתן לשמור במכשיר הזה (אולי גלישה בסתר?)');
     if (result === 'newer-version') toast(NEWER_VERSION_MESSAGE, undefined, 7000);
     return result;
+  }
+
+  /** Saves device settings; refused when the app is read-only, like every other change. */
+  setSettings(settings: Settings): boolean {
+    if (this.refuseIfReadOnly()) return false;
+    if (!saveSettings(this.store, settings)) {
+      toast('לא ניתן לשמור במכשיר הזה (אולי גלישה בסתר?)');
+      return false;
+    }
+    this.settings = settings;
+    return true;
   }
 
   getAssignment(plugin: AnyPlugin): unknown | null {
@@ -137,6 +150,7 @@ export class App {
         speaker: this.speaker,
         sounds: this.sounds,
         totalPoints: () => this.data.points,
+        wrongLetterMs: this.settings.wrongLetterSeconds * 1000,
         loadProgress: () => this.data.progress[plugin.id],
         commit: (progress, pointsToAdd = 0) => {
           if (this.readOnly) return;
