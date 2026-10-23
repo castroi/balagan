@@ -26,6 +26,13 @@ interface Highlight {
 }
 
 const DRAG_THRESHOLD = 10;
+/** Above this many words the progress dots become a "4 / 20" counter. */
+export const MAX_DOTS = 10;
+
+const removeDragGhosts = () => document.querySelectorAll('.drag-ghost').forEach((g) => g.remove());
+
+/** "מילה אחת" / "5 מילים" */
+export const wordCountLabel = (n: number) => (n === 1 ? 'מילה אחת' : `${n} מילים`);
 
 export function mountScrambledWords(container: HTMLElement, data: ScrambledWordsData, ctx: GameContext): () => void {
   const words = data.words;
@@ -34,6 +41,11 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
   let message = '';
   let lastPoints = 0;
   let skipCelebration: (() => void) | null = null;
+  let repeatTimer: number | null = null;
+  const cancelRepeat = () => {
+    if (repeatTimer !== null) window.clearTimeout(repeatTimer);
+    repeatTimer = null;
+  };
   let suppressClick: { btn: HTMLElement; until: number } | null = null;
 
   const saved = ctx.loadProgress();
@@ -96,9 +108,19 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
     render();
     ctx.sounds.play('success');
 
+    // Say the finished word again after a short pause — unless the kid skips
+    // ahead or leaves first, so an old word never plays over the next one.
+    const word = round.word;
+    const repeated = new Promise<void>((resolve) => {
+      repeatTimer = window.setTimeout(() => {
+        repeatTimer = null;
+        if (destroyed || phase !== 'celebrate') return resolve();
+        void ctx.speaker.speak(word).then(resolve);
+      }, 500);
+    });
     const skipped = new Promise<void>((resolve) => (skipCelebration = resolve));
-    const finished = Promise.all([delay(1600), delay(500).then(() => ctx.speaker.speak(round.word))]);
-    await Promise.race([skipped, finished]);
+    await Promise.race([skipped, Promise.all([delay(1600), repeated])]);
+    cancelRepeat();
     skipCelebration = null;
     if (destroyed) return;
 
@@ -162,6 +184,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
         btn.removeEventListener('pointermove', move);
         btn.removeEventListener('pointerup', up);
         btn.removeEventListener('pointercancel', cancel);
+        btn.removeEventListener('lostpointercapture', cancel);
         if (!ghost) return;
         ghost.remove();
         btn.classList.remove('dragging');
@@ -177,21 +200,29 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
       btn.addEventListener('pointermove', move);
       btn.addEventListener('pointerup', up);
       btn.addEventListener('pointercancel', cancel);
+      // Capture is lost if the tile is re-rendered mid-drag (e.g. a second finger placed a tile).
+      btn.addEventListener('lostpointercapture', cancel);
     });
   }
 
   // ---------- rendering ----------
 
-  function topBar() {
-    const dots = h('div', {
-      class: 'dots',
-      role: 'img',
-      'aria-label': `מילה ${Math.min(progress.index + 1, words.length)} מתוך ${words.length}`,
-    });
+  function progressIndicator() {
+    const current = Math.min(progress.index + 1, words.length);
+    const label = `מילה ${current} מתוך ${words.length}`;
+    // Many words don't fit as dots next to the buttons — show a counter instead.
+    if (words.length > MAX_DOTS) {
+      return h('div', { class: 'counter', role: 'img', 'aria-label': label, dir: 'ltr' }, `${current} / ${words.length}`);
+    }
+    const dots = h('div', { class: 'dots', role: 'img', 'aria-label': label });
     progress.order.forEach((_, i) => {
       const cls = i < progress.index ? 'dot done' : i === progress.index && phase !== 'end' ? 'dot current' : 'dot';
       dots.appendChild(h('span', { class: cls }));
     });
+    return dots;
+  }
+
+  function topBar() {
     return h(
       'header',
       { class: 'topbar' },
@@ -200,7 +231,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
         { class: 'icon-btn', type: 'button', 'aria-label': 'חזרה לבית', onclick: () => ctx.exit() },
         icon(ICONS.home),
       ),
-      dots,
+      progressIndicator(),
       h('div', { class: 'points-chip' }, icon(ICONS.star, 'icon star'), h('span', {}, String(ctx.totalPoints()))),
     );
   }
@@ -241,7 +272,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
   }
 
   function trayEl(hl: Highlight) {
-    const tray = h('div', { class: 'tray', style: `--count: ${round.tray.length}` });
+    const tray = h('div', { class: 'tray' });
     for (const tile of round.tray) {
       if (!tile) {
         tray.appendChild(h('span', { class: 'tile-ghost', 'aria-hidden': 'true' }));
@@ -277,7 +308,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
       h(
         'p',
         { class: 'muted big' },
-        resuming ? `מילה ${progress.index + 1} מתוך ${words.length}` : `${words.length} מילים`,
+        resuming ? `מילה ${progress.index + 1} מתוך ${words.length}` : wordCountLabel(words.length),
       ),
     );
   }
@@ -288,7 +319,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
       { class: 'stage center end' },
       icon(ICONS.star, 'icon end-star'),
       h('h1', { class: 'title' }, 'כל הכבוד!'),
-      h('p', { class: 'muted big' }, `השלמת את כל ${words.length} המילים`),
+      h('p', { class: 'muted big' }, words.length === 1 ? 'השלמת את המילה' : `השלמת את כל ${words.length} המילים`),
       h(
         'div',
         { class: 'points-chip large' },
@@ -333,6 +364,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
 
   function render(hl: Highlight = {}) {
     if (destroyed) return;
+    removeDragGhosts();
     root.replaceChildren(topBar());
     if (phase === 'intro') {
       root.appendChild(introView());
@@ -357,9 +389,10 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
 
   return () => {
     destroyed = true;
+    cancelRepeat();
     skipCelebration?.();
     ctx.speaker.cancel();
-    document.querySelectorAll('.drag-ghost').forEach((g) => g.remove());
+    removeDragGhosts();
     root.remove();
   };
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildShareLink, decodeShare, encodeShareCode, isImportHash } from '../../src/platform/share-codec';
+import { TWENTY_WORDS } from '../fixtures/words';
 
 const payload = {
   assignments: {
@@ -15,6 +16,13 @@ describe('share links', () => {
     const link = buildShareLink('https://example.app/', payload);
     const result = decodeShare(link);
     expect(result).toEqual({ ok: true, payload });
+  });
+
+  it('round-trips the maximum of 20 words and stays reasonably short', () => {
+    const big = { assignments: { 'scrambled-words': { v: 1, d: { words: TWENTY_WORDS } } } };
+    const link = buildShareLink('https://example.app/', big);
+    expect(decodeShare(link)).toEqual({ ok: true, payload: big });
+    expect(link.length).toBeLessThan(900);
   });
 
   it('accepts a full link, the hash alone, or the code alone', () => {

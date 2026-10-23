@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { deserializeWords, parseWords } from '../../src/plugins/scrambled-words/parse';
+import { deserializeWords, MAX_WORDS, parseWords } from '../../src/plugins/scrambled-words/parse';
+import { TEN_WORDS, TWENTY_ONE_WORDS, TWENTY_WORDS } from '../fixtures/words';
 
-const TEN = 'כַּעַס\nעַקְשָׁן\nמִצְטַעֵר\nעֶלְבּוֹן\nהֶעֱלִיב\nפָּגַע\nעָיֵף\nצַעַר\nרָשָׁע\nעָצוּב';
+const TEN = TEN_WORDS.join('\n');
 
 describe('parseWords', () => {
   it('accepts 10 words with niqqud', () => {
@@ -16,15 +17,21 @@ describe('parseWords', () => {
     expect(r.data?.words).toHaveLength(10);
   });
 
-  it('warns (but allows) fewer than 10 words', () => {
-    const r = parseWords('כַּעַס\nעָצוּב');
-    expect(r.data?.words).toHaveLength(2);
-    expect(r.warnings.length).toBe(1);
+  it('allows the maximum of 20 words', () => {
+    expect(MAX_WORDS).toBe(20);
   });
 
-  it('rejects more than 10 words', () => {
-    const r = parseWords(`${TEN}\nשָׁלוֹם`);
+  it.each([1, 5, 12, 13, 20])('accepts %i words with no warning', (n: number) => {
+    const r = parseWords(TWENTY_WORDS.slice(0, n).join('\n'));
+    expect(r.errors).toEqual([]);
+    expect(r.warnings).toEqual([]);
+    expect(r.data?.words).toHaveLength(n);
+  });
+
+  it('blocks 21 words with a clear message', () => {
+    const r = parseWords(TWENTY_ONE_WORDS.join('\n'));
     expect(r.data).toBeNull();
+    expect(r.errors).toContain('אפשר עד 20 מילים (הוזנו 21)');
   });
 
   it('rejects two words on one line', () => {
@@ -65,6 +72,12 @@ describe('parseWords', () => {
 describe('deserializeWords', () => {
   it('accepts valid stored data', () => {
     expect(deserializeWords({ words: ['כַּעַס'] }, 1)).not.toBeNull();
+    expect(deserializeWords({ words: TWENTY_WORDS }, 1)?.words).toHaveLength(20);
+  });
+
+  it('rejects shared data with too many words or a word with a space', () => {
+    expect(deserializeWords({ words: TWENTY_ONE_WORDS }, 1)).toBeNull();
+    expect(deserializeWords({ words: ['בַּיִת יָפֶה'] }, 1)).toBeNull();
   });
 
   it('rejects unknown versions and bad shapes', () => {

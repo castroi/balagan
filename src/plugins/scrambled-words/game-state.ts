@@ -28,7 +28,9 @@ export type PlaceResult =
 
 export function createWordRound(word: string, rng: Rng): WordRound {
   const split = splitTiles(word);
-  const expected = split.ok ? split.tiles : [...word];
+  // Words are validated when saved or imported, so this only guards against a bug.
+  if (!split.ok) throw new Error(`Invalid word reached the game: ${word}`);
+  const expected = split.tiles;
   const order = scrambleOrder(expected, rng);
   return {
     word,
@@ -105,7 +107,9 @@ export function isValidProgress(p: unknown, words: readonly string[]): p is Roun
     r.index >= 0 &&
     r.index <= words.length &&
     typeof r.roundPoints === 'number' &&
-    typeof r.done === 'boolean'
+    typeof r.done === 'boolean' &&
+    // A finished round must be marked done, and only a finished round.
+    r.done === r.index >= words.length
   );
 }
 
