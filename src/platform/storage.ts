@@ -85,6 +85,9 @@ export function isSavedByNewerVersion(store: KeyValueStore | null): boolean {
   return schema !== null && schema > SCHEMA_VERSION;
 }
 
+/** Shown when saved data is from a newer version and therefore must not be changed. */
+export const NEWER_VERSION_MESSAGE = 'התוכן נשמר בגרסה חדשה יותר של האתר. התחברו לאינטרנט ורעננו כדי לעדכן.';
+
 export type SaveResult = 'saved' | 'failed' | 'newer-version';
 
 /**

@@ -88,6 +88,12 @@ describe('parseWords — pasted text quirks', () => {
     expect(r.errors[0]).toContain('יותר מדי סימני ניקוד');
   });
 
+  it('keeps words saved before the marks rule readable, while the editor rejects them', () => {
+    const doubled = 'ב\u05BC\u05BCית'; // a doubled dagesh from an old paste
+    expect(parseWords(doubled).data).toBeNull();
+    expect(deserializeWords({ words: [doubled] }, 1)?.words).toHaveLength(1);
+  });
+
   it('names an invisible character by its code point', () => {
     const r = parseWords('א\u034Fב');
     expect(r.data).toBeNull();

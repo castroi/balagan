@@ -28,7 +28,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Device text-to-speech only; no recordings in v1 | Recordings can't travel in a link |
 | Voice-test buttons and a "no Hebrew voice" warning on the edit screen | Voice quality varies by phone |
 | Practice only — nothing is sent anywhere | No accounts, no tracking |
-| Data saved by a newer app version is never overwritten; the app says to refresh | An old cached version opened offline must not wipe the week's words |
+| Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
 
 ## Design rules (every activity)
@@ -43,7 +43,8 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Correct: green + ✓ icon + short sound | Color is never the only signal (color-blind kids) |
 | No decoration that does nothing; no "coming soon" items | Distracts and frustrates kids |
 | Respect "reduce motion" (already global in `styles.css`) | Accessibility |
-| Confirmation dialogs start on the safe button; Escape cancels | A quick tap or Enter must not delete anything |
+| Confirmation dialogs start on the safe button; Escape cancels; the page behind is inert | A quick tap or Enter must not delete anything; focus can't wander behind the dialog |
+| After a screen change, focus moves to the new screen's title | Keyboard and screen-reader users aren't left on an empty page |
 | Screen-reader messages go through `announce()` (`src/ui/dialog.ts`), not new `aria-live` elements | Live regions recreated on every render aren't read aloud |
 | Borders of empty slots and inputs use `--line` (at least 3:1 contrast) | Kids must see where letters go |
 | Media "play" icon points right even in RTL | Media controls aren't mirrored |
@@ -55,7 +56,8 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 |---|---|
 | Store only compact source text (e.g. the word list), never computed state, audio or images | All content travels inside one link |
 | Clean pasted text with `normalizeText` (`src/core/unicode.ts`) before validating or storing | The same word copied from different apps must produce identical characters |
-| Every apostrophe (', ‘, ’) becomes the Hebrew geresh ׳; at most 4 marks per letter and no repeated mark | iPhone types curly apostrophes; repeated marks are pasting mistakes that bloat links |
+| Every apostrophe (', ‘, ’) becomes the Hebrew geresh ׳; the editor allows at most 4 marks per letter, no repeated mark and one geresh | iPhone types curly apostrophes; repeated marks are pasting mistakes that bloat links |
+| Saved and shared data is re-checked leniently (`deserialize` doesn't apply new editor-only rules) | Words saved before a rule existed must keep working |
 | Error messages show invisible characters as a code point (e.g. `U+034F`) | The parent must be able to see what's wrong |
 | Use content exactly as the parent typed it (niqqud, final letters) | The parent controls the content |
 | Validate in the editor with clear Hebrew messages; block saving on errors | Bad content shouldn't reach the kid |

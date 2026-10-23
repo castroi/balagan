@@ -1,15 +1,17 @@
 import './styles.css';
-import { App, NEWER_VERSION_MESSAGE } from './app';
-import { isSavedByNewerVersion } from './platform/storage';
+import { App } from './app';
+import { NEWER_VERSION_MESSAGE } from './platform/storage';
 import { isImportHash } from './platform/share-codec';
-import { confirmDialog, toast } from './ui/dialog';
+import { confirmDialog, prepareAnnouncer, toast } from './ui/dialog';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app element');
 
+// Screen readers ignore a live region added late, so create it before any message.
+prepareAnnouncer();
 const app = new App(root);
 app.showHome();
-if (isSavedByNewerVersion(app.store)) toast(NEWER_VERSION_MESSAGE, undefined, 7000);
+if (app.readOnly) toast(NEWER_VERSION_MESSAGE, undefined, 7000);
 
 // Ask the browser not to evict saved words when space is low.
 void navigator.storage?.persist?.().catch(() => undefined);
@@ -19,6 +21,9 @@ async function handleShareLink() {
   const hash = window.location.hash;
   if (!isImportHash(hash)) return;
   history.replaceState(null, '', window.location.pathname + window.location.search);
+  // A question is already on screen (e.g. a second link arrived): don't stack another.
+  if (document.querySelector('.overlay')) return;
+  if (app.refuseIfReadOnly()) return;
 
   const result = app.readImport(hash);
   if ('error' in result) {
@@ -26,11 +31,14 @@ async function handleShareLink() {
     return;
   }
   const hasContent = Object.keys(app.data.assignments).length > 0;
-  const ok = hasContent
-    ? await confirmDialog('התקבלו משימות חדשות. להחליף את התוכן של השבוע?', 'להחליף')
-    : true;
-  if (!ok) return;
-  app.applyImport(result.entries);
+  const unsaved = app.hasUnsavedChanges();
+  if (hasContent || unsaved) {
+    const question = unsaved
+      ? 'התקבלו משימות חדשות, ויש שינויים שלא נשמרו. להחליף את התוכן של השבוע?'
+      : 'התקבלו משימות חדשות. להחליף את התוכן של השבוע?';
+    if (!(await confirmDialog(question, 'להחליף'))) return;
+  }
+  if (app.applyImport(result.entries) !== 'saved') return;
   app.showHome();
   toast('המשימות נטענו');
 }

@@ -40,21 +40,42 @@ test.describe('Clear and Undo', () => {
 
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
-    expect(await savedWords(page)).toEqual(WORDS);
+    await expect.poll(() => savedWords(page)).toEqual(WORDS);
   });
 
   test('Undo after Clear restores the words and the voice-test list', async ({ page }) => {
     await saveWords(page, WORDS);
     await page.getByRole('button', { name: 'ניקוי' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'מחיקה' }).click();
-    expect(await savedWords(page)).toBeNull();
+    await expect.poll(() => savedWords(page)).toBeNull();
     await expect(page.locator('#input-scrambled-words')).toHaveValue('');
     await expect(page.locator('.chip')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'ביטול' }).click(); // the Undo button in the message
-    expect(await savedWords(page)).toEqual(WORDS);
+    await expect.poll(() => savedWords(page)).toEqual(WORDS);
     await expect(page.locator('#input-scrambled-words')).toHaveValue(WORDS.join('\n'));
     await expect(page.locator('.chip')).toHaveCount(3);
+  });
+
+  test('tapping the dimmed background keeps keyboard focus inside the dialog', async ({ page }) => {
+    await saveWords(page, WORDS);
+    await page.getByRole('button', { name: 'ניקוי' }).click();
+    await page.mouse.click(5, 5); // the dimmed background
+    await page.keyboard.press('Tab');
+    const focusedInDialog = await page.evaluate(() => !!document.activeElement?.closest('.dialog'));
+    expect(focusedInDialog).toBe(true);
+    // The page behind can't be reached while the dialog is open.
+    expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(true);
+    await page.keyboard.press('Escape');
+    expect(await page.evaluate(() => (document.getElementById('app') as HTMLElement).inert)).toBe(false);
+  });
+
+  test('leaving with unsaved edits asks first, then focus moves to the home title', async ({ page }) => {
+    await saveWords(page, WORDS);
+    await page.locator('#input-scrambled-words').fill('שָׁלוֹם');
+    await page.getByRole('button', { name: 'חזרה' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'לצאת' }).click();
+    await expect(page.getByRole('heading', { name: 'שלום!' })).toBeFocused();
   });
 
   test('the Undo message disappears when leaving the edit screen', async ({ page }) => {
@@ -74,7 +95,7 @@ test.describe('loading from a link', () => {
     // Only the hash changes — the page is not reloaded.
     await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, WORDS)).hash);
     await expect(page.locator('.card')).toContainText('3 מילים');
-    expect(await savedWords(page)).toEqual(WORDS);
+    await expect.poll(() => savedWords(page)).toEqual(WORDS);
     expect(await page.evaluate(() => location.hash)).toBe('');
   });
 
@@ -85,12 +106,34 @@ test.describe('loading from a link', () => {
 
     await page.getByRole('button', { name: 'טעינה מהקישור' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'ביטול' }).click();
-    expect(await savedWords(page)).toEqual(WORDS);
+    await expect.poll(() => savedWords(page)).toEqual(WORDS);
 
     await page.getByRole('button', { name: 'טעינה מהקישור' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'להחליף' }).click();
-    expect(await savedWords(page)).toEqual(OTHER_WORDS);
+    await expect.poll(() => savedWords(page)).toEqual(OTHER_WORDS);
     await expect(page.locator('#input-scrambled-words')).toHaveValue(OTHER_WORDS.join('\n'));
+  });
+
+  test('a link arriving while there are unsaved edits asks first', async ({ page, baseURL }) => {
+    await saveWords(page, WORDS);
+    await page.locator('#input-scrambled-words').fill('שָׁלוֹם');
+    await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, OTHER_WORDS)).hash);
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('שינויים שלא נשמרו');
+    await dialog.getByRole('button', { name: 'ביטול' }).click();
+    await expect.poll(() => savedWords(page)).toEqual(WORDS);
+    await expect(page.locator('#input-scrambled-words')).toHaveValue('שָׁלוֹם');
+  });
+
+  test('a second link while a question is open does not stack another question', async ({ page, baseURL }) => {
+    await saveWords(page, WORDS);
+    await page.getByRole('button', { name: 'חזרה' }).click();
+    const hash = new URL(linkFor(baseURL!, OTHER_WORDS)).hash;
+    await page.evaluate((h) => (location.hash = h), hash);
+    await expect(page.getByRole('alertdialog')).toHaveCount(1);
+    await page.evaluate((h) => (location.hash = h), hash);
+    await page.waitForTimeout(200);
+    await expect(page.getByRole('alertdialog')).toHaveCount(1);
   });
 
   test('a broken or cut-off link shows a clear message', async ({ page, baseURL }) => {
@@ -103,18 +146,46 @@ test.describe('loading from a link', () => {
   });
 });
 
-test('data saved by a newer version of the app is never overwritten', async ({ page }) => {
+test.describe('data saved by a newer version of the app', () => {
   const newer = JSON.stringify({ schema: 99, assignments: {}, futureField: 'keep me' });
-  await page.goto('/');
-  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [KEY, newer]);
-  await page.reload();
-  await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
 
-  await openEdit(page);
-  await page.locator('#input-scrambled-words').fill(WORDS.join('\n'));
-  await page.getByRole('button', { name: 'שמירה' }).click();
-  await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
-  expect(await page.evaluate((key) => localStorage.getItem(key), KEY)).toBe(newer);
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(([key, value]) => localStorage.setItem(key, value), [KEY, newer]);
+    await page.reload();
+    await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
+  });
+
+  const stored = (page: Page) => page.evaluate((key) => localStorage.getItem(key), KEY);
+
+  test('saving words is refused and nothing changes', async ({ page }) => {
+    await openEdit(page);
+    await expect(page.locator('.banner').filter({ hasText: 'גרסה חדשה יותר' })).toBeVisible();
+    await page.locator('#input-scrambled-words').fill(WORDS.join('\n'));
+    await page.getByRole('button', { name: 'שמירה' }).click();
+    await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
+    expect(await stored(page)).toBe(newer);
+    // Not even in memory: home still has nothing to play.
+    await page.getByRole('button', { name: 'חזרה' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'לצאת' }).click();
+    await expect(page.locator('.card')).toContainText('עדיין אין תוכן');
+  });
+
+  test('a share link is refused and nothing changes', async ({ page, baseURL }) => {
+    await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, WORDS)).hash);
+    await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
+    await expect(page.locator('.card')).toContainText('עדיין אין תוכן');
+    expect(await stored(page)).toBe(newer);
+  });
+
+  test('the import box is refused and nothing changes', async ({ page, baseURL }) => {
+    await openEdit(page);
+    await page.getByLabel('קיבלתם קישור?').fill(linkFor(baseURL!, WORDS));
+    await page.getByRole('button', { name: 'טעינה מהקישור' }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
+    expect(await stored(page)).toBe(newer);
+  });
 });
 
 test('empty answer slots have enough contrast (at least 3:1)', async ({ page }) => {
@@ -122,7 +193,7 @@ test('empty answer slots have enough contrast (at least 3:1)', async ({ page }) 
   await page.getByRole('button', { name: 'חזרה' }).click();
   await page.locator('.card').click();
   await page.locator('.start-btn').click();
-  const ratio = await page.evaluate(() => {
+  const ratios = await page.evaluate(() => {
     const parse = (c: string) => (c.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
     const lum = ([r, g, b]: number[]) => {
       const f = (v: number) => {
@@ -131,9 +202,14 @@ test('empty answer slots have enough contrast (at least 3:1)', async ({ page }) 
       };
       return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
     };
-    const slot = getComputedStyle(document.querySelector('.slot.empty')!);
-    const [a, b] = [lum(parse(slot.borderTopColor)), lum(parse(slot.backgroundColor))].sort((x, y) => y - x);
-    return (a + 0.05) / (b + 0.05);
+    const contrast = (c1: string, c2: string) => {
+      const [a, b] = [lum(parse(c1)), lum(parse(c2))].sort((x, y) => y - x);
+      return (a + 0.05) / (b + 0.05);
+    };
+    const border = getComputedStyle(document.querySelector('.slot.empty')!).borderTopColor;
+    const background = (selector: string) => getComputedStyle(document.querySelector(selector)!).backgroundColor;
+    // Against the slot itself (white), the letter tray and the page.
+    return [border, background('.slot.empty'), background('.tray'), getComputedStyle(document.body).backgroundColor].slice(1).map((bg) => contrast(border, bg));
   });
-  expect(ratio).toBeGreaterThanOrEqual(3);
+  for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(3);
 });

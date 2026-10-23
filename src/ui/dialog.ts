@@ -1,18 +1,37 @@
 import { h } from './dom';
 
+let dialogCount = 0;
+
 /**
  * A yes/no dialog. Resolves true when the first (action) button is chosen.
- * Focus starts on the safe "cancel" button, Escape cancels, Tab stays inside
- * the dialog, and focus returns to where it was afterwards.
+ * Focus starts on the safe "cancel" button, Escape cancels, keyboard focus
+ * stays inside the dialog, the page behind is inert (not reachable by touch,
+ * keyboard or screen reader), and focus returns afterwards when possible.
  */
 export function confirmDialog(message: string, okLabel: string, cancelLabel = 'ביטול'): Promise<boolean> {
   return new Promise((resolve) => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
+    const app = document.getElementById('app');
+    const id = `dialog-${++dialogCount}`;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close(false);
+      } else if (e.key === 'Tab') {
+        // Only two buttons: Tab and Shift+Tab move between them, never out.
+        e.preventDefault();
+        (document.activeElement === cancel ? ok : cancel).focus();
+      }
+    };
     const close = (answer: boolean) => {
+      document.removeEventListener('keydown', onKey, true);
       overlay.remove();
-      previouslyFocused?.focus?.();
+      if (app) app.inert = false;
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
       resolve(answer);
     };
+
     const ok = h('button', { class: 'btn btn-primary', type: 'button', onclick: () => close(true) }, okLabel);
     const cancel = h('button', { class: 'btn', type: 'button', onclick: () => close(false) }, cancelLabel);
     const overlay = h(
@@ -20,41 +39,44 @@ export function confirmDialog(message: string, okLabel: string, cancelLabel = '�
       { class: 'overlay', role: 'presentation' },
       h(
         'div',
-        { class: 'dialog', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': message },
-        h('p', { class: 'dialog-text' }, message),
+        { class: 'dialog', role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': id },
+        h('p', { class: 'dialog-text', id }, message),
         h('div', { class: 'dialog-actions' }, ok, cancel),
       ),
     );
-    overlay.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        close(false);
-      } else if (e.key === 'Tab') {
-        // Only two buttons: Tab and Shift+Tab move between them.
-        e.preventDefault();
-        (document.activeElement === ok ? cancel : ok).focus();
-      }
+    // A tap on the dimmed background keeps focus in the dialog.
+    overlay.addEventListener('mousedown', (e) => {
+      if (e.target === overlay) e.preventDefault();
     });
+    document.addEventListener('keydown', onKey, true);
+    if (app) app.inert = true;
     document.body.appendChild(overlay);
     cancel.focus();
   });
 }
 
 let liveRegion: HTMLElement | null = null;
+let pendingAnnouncement: number | undefined;
+
+/** Creates the screen-reader live region early (one added late is often ignored). */
+export function prepareAnnouncer(): HTMLElement {
+  if (!liveRegion || !liveRegion.isConnected) {
+    liveRegion = h('div', { class: 'visually-hidden', 'aria-live': 'polite', 'aria-atomic': 'true' });
+    document.body.appendChild(liveRegion);
+  }
+  return liveRegion;
+}
 
 /**
  * Reads a short message aloud to screen-reader users, through one live region
  * that stays on the page (regions recreated on every render aren't announced).
  */
 export function announce(message: string): void {
-  if (!liveRegion || !liveRegion.isConnected) {
-    liveRegion = h('div', { class: 'visually-hidden', 'aria-live': 'polite', 'aria-atomic': 'true' });
-    document.body.appendChild(liveRegion);
-  }
-  const region = liveRegion;
+  const region = prepareAnnouncer();
+  window.clearTimeout(pendingAnnouncement);
   // Clear first so the same message is announced again when repeated.
   region.textContent = '';
-  window.setTimeout(() => (region.textContent = message), 50);
+  pendingAnnouncement = window.setTimeout(() => (region.textContent = message), 50);
 }
 
 let currentToast: HTMLElement | null = null;

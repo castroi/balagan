@@ -60,10 +60,11 @@ export function splitTiles(word: string): SplitResult {
   return { ok: true, tiles };
 }
 
-/** False when a tile has too many marks or the same mark twice (pasting mistakes). */
+/** False when a tile has too many marks, the same mark twice, or two gereshes (pasting mistakes). */
 export function hasValidMarks(tile: string): boolean {
   const marks = tile.match(MARK) ?? [];
-  return marks.length <= MAX_MARKS_PER_LETTER && new Set(marks).size === marks.length;
+  const gereshes = tile.split(GERESH).length - 1;
+  return marks.length <= MAX_MARKS_PER_LETTER && new Set(marks).size === marks.length && gereshes <= 1;
 }
 
 /**

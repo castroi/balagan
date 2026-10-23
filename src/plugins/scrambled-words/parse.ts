@@ -9,8 +9,12 @@ export interface ScrambledWordsData {
   words: string[];
 }
 
-/** One word per line. Words are kept exactly as typed (after cleanup). */
-export function parseWords(text: string): ParseResult<ScrambledWordsData> {
+/**
+ * One word per line. Words are kept exactly as typed (after cleanup).
+ * `strictMarks: false` skips the marks-per-letter check, so words saved or
+ * shared before that rule existed keep working; the editor always checks.
+ */
+export function parseWords(text: string, { strictMarks = true } = {}): ParseResult<ScrambledWordsData> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const words: string[] = [];
@@ -31,7 +35,7 @@ export function parseWords(text: string): ParseResult<ScrambledWordsData> {
       errors.push(`שורה ${line}: התו ${describeChar(split.badChar)} אינו אות עברית`);
       return;
     }
-    const overMarked = split.tiles.find((t) => !hasValidMarks(t));
+    const overMarked = strictMarks ? split.tiles.find((t) => !hasValidMarks(t)) : undefined;
     if (overMarked) {
       errors.push(`שורה ${line}: יותר מדי סימני ניקוד על האות "${overMarked[0]}"`);
       return;
@@ -64,5 +68,5 @@ export function deserializeWords(raw: unknown, version: number): ScrambledWordsD
   if (typeof raw !== 'object' || raw === null) return null;
   const words = (raw as { words?: unknown }).words;
   if (!Array.isArray(words) || !words.every((w) => typeof w === 'string')) return null;
-  return parseWords(words.join('\n')).data;
+  return parseWords(words.join('\n'), { strictMarks: false }).data;
 }

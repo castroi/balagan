@@ -74,6 +74,11 @@ describe('hasValidMarks', () => {
     expect(hasValidMarks('ב' + '\u05BC'.repeat(500))).toBe(false);
     expect(hasValidMarks('ב\u05B0\u05B1\u05B2\u05B3\u05B4')).toBe(false);
   });
+
+  it('rejects two gereshes on one letter', () => {
+    expect(hasValidMarks(`ג${GERESH}`)).toBe(true);
+    expect(hasValidMarks(`ג${GERESH}${GERESH}`)).toBe(false);
+  });
 });
 
 describe('describeChar', () => {
