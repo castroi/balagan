@@ -6,8 +6,9 @@ Assignment types:
 
 - **Scrambled Words** (מילים מבולגנות): the word is spoken, the letters are scrambled, and the kid puts them back in order.
 - **Confusing Letters** (אותיות מבלבלות): the same game, with letters that sound alike (ס/צ, ק/כ, א/ע/ה…) mixed into the tray. The parent writes each word followed by its confusing letters, e.g. `כַּעַס ק צ ה א`.
+- **Choose Word** (בחרו את המילה): the word is spoken and the kid taps the correct spelling among 2–4 words. The parent writes the correct word first, then 1–3 wrong spellings, e.g. `כַּעַס קַעַס כַּאַס קַאַס`.
 
-On the edit screen, **הגדרות** sets how long the popup after a word stays when it shows a letter pair in Confusing Letters (1.5–8 seconds, default 3). Every other popup keeps its normal length. It's saved on that device only.
+On the edit screen, **הגדרות** sets how long the popup after a word stays when it shows a right/wrong pair — a letter pair in Confusing Letters or a word pair in Choose Word (1.5–8 seconds, default 3). Every other popup keeps its normal length. It's saved on that device only.
 
 ## Run it on your computer
 
@@ -17,6 +18,7 @@ Requires Node.js 22 (the same version CI and Vercel use).
 npm install
 npm run dev        # opens a local site with live reload
 npm test           # unit tests
+npm run test:coverage  # unit tests with a coverage report (coverage/index.html)
 npm run test:e2e   # browser smoke tests (first time: npx playwright install chromium webkit)
 npm run build      # type-check + tests + production build into dist/
 ```
@@ -48,6 +50,7 @@ src/
     shared/letter-game/    letter-tile game shared by both types: round logic, progress, game screen
     scrambled-words/       parse + validation, plugin object (game-state.ts, view.ts, text.ts re-export the shared engine)
     confusing-letters/     parse + validation, editor preview, plugin object
+    choose-word/           parse + validation, round logic, game screen, editor preview, plugin object
   ui/          home screen, edit screen, dialogs
 tests/unit/    unit tests (Vitest)
 tests/e2e/     browser smoke tests on phone-sized screens (Playwright)
@@ -70,9 +73,10 @@ Automated tests can't cover these:
 - [ ] iPhone with the silent switch on: do sounds and speech still play?
 - [ ] Niqqud renders correctly on the tiles, including small tiles in 10-letter words.
 - [ ] Confusing Letters with 15 tiles on the smallest phone you have: all tiles fit without scrolling and are easy to tap.
+- [ ] Choose Word with 4 long words (8–10 letters with niqqud) on the smallest phone: one column, readable niqqud, no scrolling.
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
 - [ ] Edit screen → הגדרות: the time the letter pair stays after a word feels right for the kid.
-- [ ] Share link with a full week of both activities (20 words each), sent and opened from WhatsApp, loads both.
+- [ ] Share link with a full week of all three activities (20 words each, 4 options per Choose Word line), sent and opened from WhatsApp, loads all three.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
 - [ ] Airplane mode after one online visit: the app still opens, with the Hebrew fonts. On iPhone, that visit must be made from the installed home-screen app (it has its own storage).
