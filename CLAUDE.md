@@ -21,7 +21,8 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Keep the Import box on the edit screen | On iPhone, an installed home-screen app has separate storage and can't receive links directly |
 | TypeScript + Vite, no UI framework | A few screens; type checks catch mistakes before the phone |
 | `npm run build` runs type check + unit tests before building | Vercel won't deploy a broken version |
-| Offline service worker, network-first, **no update prompt** | The latest version loads automatically when online |
+| Offline service worker generated at build time (`build/service-worker.template.js`): caches every built file on install, one cache per build (version = hash of every file's content) | The app opens offline after a single visit; old versions don't pile up |
+| Pages network-first with a 3-second timeout, **no update prompt** | The latest version loads automatically when online; a weak connection doesn't block the kid |
 | Interface in Hebrew, right to left | It's for the kid |
 | Version only on the edit screen, set in `package.json` | Not distracting during play; one place to change it |
 | No PIN; Clear asks to confirm and offers undo | Simple for the parent, safe from accidental taps |
@@ -96,4 +97,4 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 ## Not done on purpose (possible later)
 
-"Check at the end" mode for older kids, parental gate/PIN, hints, skip button, parent voice recordings, timer, distractor letters, update prompt, spoken instructions for non-readers, phone vibration, bundling fonts in the project (now loaded from Google Fonts and cached offline).
+"Check at the end" mode for older kids, parental gate/PIN, hints, skip button, parent voice recordings, timer, distractor letters, update prompt, spoken instructions for non-readers, phone vibration, bundling fonts in the project (now loaded from Google Fonts; the service worker caches them on install, best effort).
