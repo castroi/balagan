@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeText, splitTiles } from '../../src/core/unicode';
+import { describeChar, GERESH, hasValidMarks, normalizeText, splitTiles } from '../../src/core/unicode';
 
 const tiles = (word: string) => {
   const r = splitTiles(normalizeText(word));
@@ -43,9 +43,13 @@ describe('splitTiles', () => {
     expect(tiles('עֶלְבּוֹן').at(-1)).toBe('ן');
   });
 
-  it('keeps a geresh with its letter', () => {
-    expect(tiles("ג'ירפה")[0]).toBe("ג'");
-    expect(tiles('ג׳ירפה')[0]).toBe('ג׳');
+  it('keeps a geresh with its letter, whichever apostrophe was typed', () => {
+    // ASCII ', iPhone's curly ’ and ‘, and the Hebrew geresh ׳ all give the same tiles.
+    const expected = tiles('ג׳ירפה');
+    expect(expected[0]).toBe(`ג${GERESH}`);
+    expect(tiles("ג'ירפה")).toEqual(expected);
+    expect(tiles('ג\u2019ירפה')).toEqual(expected);
+    expect(tiles('ג\u2018ירפה')).toEqual(expected);
   });
 
   it('rejects non-Hebrew characters', () => {
@@ -56,5 +60,32 @@ describe('splitTiles', () => {
 
   it('rejects a mark with no letter before it', () => {
     expect(splitTiles(normalizeText('ָא')).ok).toBe(false);
+  });
+});
+
+describe('hasValidMarks', () => {
+  it('accepts normal niqqud, including shin dot + dagesh + vowel', () => {
+    expect(hasValidMarks(normalizeText('שָּׁ'))).toBe(true);
+    expect(hasValidMarks('א')).toBe(true);
+  });
+
+  it('rejects a repeated mark or too many marks on one letter', () => {
+    expect(hasValidMarks('ב\u05BC\u05BC')).toBe(false);
+    expect(hasValidMarks('ב' + '\u05BC'.repeat(500))).toBe(false);
+    expect(hasValidMarks('ב\u05B0\u05B1\u05B2\u05B3\u05B4')).toBe(false);
+  });
+
+  it('rejects two gereshes on one letter', () => {
+    expect(hasValidMarks(`ג${GERESH}`)).toBe(true);
+    expect(hasValidMarks(`ג${GERESH}${GERESH}`)).toBe(false);
+  });
+});
+
+describe('describeChar', () => {
+  it('quotes visible characters and shows invisible ones as a code point', () => {
+    expect(describeChar('c')).toBe('"c"');
+    expect(describeChar('!')).toBe('"!"');
+    expect(describeChar('\u034F')).toBe('U+034F');
+    expect(describeChar('\u05B8')).toBe('U+05B8');
   });
 });

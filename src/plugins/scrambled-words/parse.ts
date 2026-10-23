@@ -1,4 +1,4 @@
-import { normalizeText, splitTiles } from '../../core/unicode';
+import { describeChar, hasValidMarks, normalizeText, splitTiles } from '../../core/unicode';
 import { isScramblable } from '../../core/shuffle';
 import type { ParseResult } from '../types';
 
@@ -10,8 +10,12 @@ export interface ScrambledWordsData {
   words: string[];
 }
 
-/** One word per line. Words are kept exactly as typed (after cleanup). */
-export function parseWords(text: string): ParseResult<ScrambledWordsData> {
+/**
+ * One word per line. Words are kept exactly as typed (after cleanup).
+ * `strictMarks: false` skips the marks-per-letter check, so words saved or
+ * shared before that rule existed keep working; the editor always checks.
+ */
+export function parseWords(text: string, { strictMarks = true } = {}): ParseResult<ScrambledWordsData> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const words: string[] = [];
@@ -29,7 +33,12 @@ export function parseWords(text: string): ParseResult<ScrambledWordsData> {
     }
     const split = splitTiles(word);
     if (!split.ok) {
-      errors.push(`שורה ${line}: התו "${split.badChar}" אינו אות עברית`);
+      errors.push(`שורה ${line}: התו ${describeChar(split.badChar)} אינו אות עברית`);
+      return;
+    }
+    const overMarked = strictMarks ? split.tiles.find((t) => !hasValidMarks(t)) : undefined;
+    if (overMarked) {
+      errors.push(`שורה ${line}: יותר מדי סימני ניקוד על האות "${overMarked[0]}"`);
       return;
     }
     if (split.tiles.length > MAX_TILES) {
@@ -57,5 +66,5 @@ export function deserializeWords(raw: unknown, version: number): ScrambledWordsD
   if (typeof raw !== 'object' || raw === null) return null;
   const words = (raw as { words?: unknown }).words;
   if (!Array.isArray(words) || !words.every((w) => typeof w === 'string')) return null;
-  return parseWords(words.join('\n')).data;
+  return parseWords(words.join('\n'), { strictMarks: false }).data;
 }

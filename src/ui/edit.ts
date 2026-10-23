@@ -3,6 +3,7 @@ import { PLUGINS } from '../plugins/registry';
 import type { AnyPlugin } from '../plugins/types';
 import { buildShareLink } from '../platform/share-codec';
 import { APP_VERSION } from '../platform/version';
+import { NEWER_VERSION_MESSAGE } from '../platform/storage';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
 import { confirmDialog, toast } from './dialog';
@@ -14,6 +15,12 @@ interface Section {
 
 export function renderEdit(container: HTMLElement, app: App): void {
   const sections = PLUGINS.map((p) => pluginSection(app, p));
+  app.setUnsavedCheck(() => sections.some((s) => s.isDirty()));
+
+  // Saved data is from a newer version: show why nothing can be changed here.
+  const readOnlyBanner = app.readOnly
+    ? h('div', { class: 'banner', role: 'status' }, icon(ICONS.alert), h('span', {}, NEWER_VERSION_MESSAGE))
+    : null;
 
   const goBack = async () => {
     if (sections.some((s) => s.isDirty())) {
@@ -54,6 +61,7 @@ export function renderEdit(container: HTMLElement, app: App): void {
         h('h1', { class: 'edit-title' }, 'עריכת משימות'),
         h('span', { class: 'version', dir: 'ltr' }, `גרסה ${APP_VERSION}`),
       ),
+      readOnlyBanner,
       voiceBanner,
       ...sections.map((s) => s.el),
       shareSection(app, sections),
@@ -136,7 +144,8 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
   saveBtn.addEventListener('click', () => {
     const result = plugin.parse(textarea.value);
     if (result.data === null) return;
-    app.setAssignment(plugin, result.data);
+    // Not saved (device refused, or newer data must not be overwritten): the message says why.
+    if (app.setAssignment(plugin, result.data) !== 'saved') return;
     savedText = plugin.toText(result.data);
     textarea.value = savedText;
     renderVoiceList();
@@ -145,12 +154,13 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
   });
 
   clearBtn.addEventListener('click', async () => {
+    if (app.refuseIfReadOnly()) return;
     const ok = await confirmDialog(`למחוק את התוכן של "${plugin.title}"?`, 'מחיקה');
     if (!ok) return;
     const prevAssignment = app.data.assignments[plugin.id];
     const prevProgress = app.data.progress[plugin.id];
     const prevText = textarea.value;
-    app.setAssignment(plugin, null);
+    if (app.setAssignment(plugin, null) !== 'saved') return;
     savedText = '';
     textarea.value = '';
     renderVoiceList();
@@ -160,6 +170,7 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
       {
         label: 'ביטול',
         run: () => {
+          if (app.refuseIfReadOnly()) return;
           if (prevAssignment) app.data.assignments[plugin.id] = prevAssignment;
           if (prevProgress !== undefined) app.data.progress[plugin.id] = prevProgress;
           app.save();
@@ -256,6 +267,7 @@ function importSection(app: App): HTMLElement {
 
   async function runImport() {
     feedback.replaceChildren();
+    if (app.refuseIfReadOnly()) return;
     const result = app.readImport(input.value);
     if ('error' in result) {
       feedback.appendChild(h('p', { class: 'msg error' }, result.error));
@@ -263,9 +275,9 @@ function importSection(app: App): HTMLElement {
     }
     const ok = await confirmDialog('להחליף את התוכן של השבוע במכשיר הזה?', 'להחליף');
     if (!ok) return;
-    app.applyImport(result.entries);
-    toast(result.skipped ? 'המשימות נטענו (חלק מהתוכן לא נתמך בגרסה הזו)' : 'המשימות נטענו');
+    if (app.applyImport(result.entries) !== 'saved') return;
     app.showEdit();
+    toast(result.skipped ? 'המשימות נטענו (חלק מהתוכן לא נתמך בגרסה הזו)' : 'המשימות נטענו');
   }
 
   return h(
