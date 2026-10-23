@@ -108,7 +108,8 @@ test('a wrong word: orange shake, then dimmed; after the right word, the contras
   await expect(dimmed).toHaveAttribute('aria-label', /נוסתה$/);
 
   // Tapping the dimmed word again isn't another mistake (2 mistakes still give 7 points; 3 would give 5).
-  await dimmed.click();
+  // dispatchEvent: Playwright won't click an aria-disabled element, but a kid's finger can.
+  await dimmed.dispatchEvent('click');
   await page.waitForTimeout(100);
   await expect(page.locator('.choice.wrong')).toHaveCount(0);
   await tap(page, n('כַּאַס'));
