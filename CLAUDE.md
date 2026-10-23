@@ -32,6 +32,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Practice only — nothing is sent anywhere | No accounts, no tracking |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
+| Device settings (e.g. how long a wrong letter stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
 
 ## Design rules (every activity)
 
@@ -90,7 +91,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 **Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item.
 
-**Release:** bump the version in `package.json` (new activity = minor, e.g. 1.0.0 → 1.1.0; fixes = patch), then run the "Manual checks on real phones" list in `README.md`.
+**Release:** bump the version in `package.json` (new activity or feature = minor, e.g. 1.0.0 → 1.1.0; fixes = patch), then run the "Manual checks on real phones" list in `README.md`.
 
 ## Scrambled Words (מילים מבולגנות) — decisions
 
@@ -102,7 +103,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | One tile = letter + all its marks (niqqud, dagesh, shin/sin dot, geresh) | Niqqud belongs to its letter |
 | Tiles never in the correct order, and never the reversed word when another order exists | Reversed is an easy giveaway in RTL |
 | Tap places the tile in the next slot; dropping a dragged tile anywhere outside the tray does the same; dropping it back on the tray cancels | One way of placing is clearer for young kids; dropping back lets the kid change their mind |
-| Each letter is checked immediately; correct locks, wrong returns to the tray | The owner's choice: instant feedback |
+| Each letter is checked immediately; correct locks, wrong returns to the tray after the time set on the edit screen (הגדרות: 0.5 / 1 / 1.5 / 2 / 3 seconds, default 1.5; also with reduce motion) | The owner's choice: instant feedback; 0.55 s was too fast to see which letter was wrong |
 | Identical-looking letters are interchangeable | Fair to the kid |
 | Points per word: 0 mistakes = 10, 1–2 = 7, 3+ = 5 | Reward accuracy without punishing; chosen over hints |
 | No hint, no skip button, no timer, no extra letters (extra letters are the Confusing Letters activity) | Kept simple; a kid can't get stuck with per-letter feedback |

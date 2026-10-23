@@ -996,6 +996,57 @@ body:has(.screen.edit) {
   color: var(--muted);
 }
 
+/* ---------- Edit screen: settings ---------- */
+.setting-label {
+  margin: 0;
+  font-weight: 500;
+}
+
+.seg {
+  display: flex;
+  gap: 8px;
+}
+
+.seg-option {
+  flex: 1;
+  position: relative;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* The radio stays in the page for keyboards and screen readers; the label is what's seen. */
+.seg-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.seg-option:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.seg-option:has(input:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.seg-option:has(input:disabled) {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ---------- Confusing Letters: up to 15 tiles on a 360px phone ---------- */
 .game.compact .stage {
   padding-top: 20px;

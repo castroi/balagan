@@ -69,6 +69,7 @@ Automated tests can't cover these:
 - [ ] Niqqud renders correctly on the tiles, including small tiles in 10-letter words.
 - [ ] Confusing Letters with 15 tiles on the smallest phone you have: all tiles fit without scrolling and are easy to tap.
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
+- [ ] Edit screen → הגדרות: the chosen time for a wrong letter feels right for the kid.
 - [ ] Share link with a full week of both activities (20 words each), sent and opened from WhatsApp, loads both.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.

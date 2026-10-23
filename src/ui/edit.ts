@@ -5,6 +5,7 @@ import { buildShareLink } from '../platform/share-codec';
 import { APP_VERSION } from '../platform/version';
 import { NEWER_VERSION_MESSAGE } from '../platform/storage';
 import { importedTitles } from '../platform/import';
+import { WRONG_LETTER_SECONDS } from '../platform/settings';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
 import { confirmDialog, toast } from './dialog';
@@ -65,6 +66,7 @@ export function renderEdit(container: HTMLElement, app: App): void {
       readOnlyBanner,
       voiceBanner,
       ...sections.map((s) => s.el),
+      settingsSection(app),
       shareSection(app, sections),
       importSection(app),
     ),
@@ -244,6 +246,38 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
 
   const el = h('section', { class: 'panel', 'data-plugin': plugin.id }, h('h2', { class: 'panel-head' }, toggle), body);
   return { el, isDirty };
+}
+
+/** Device settings (not in the share link). Saved as soon as a value is chosen. */
+function settingsSection(app: App): HTMLElement {
+  const name = 'wrong-letter-seconds';
+  const legendId = `${name}-legend`;
+  const options = h('div', { class: 'seg', role: 'radiogroup', 'aria-labelledby': legendId });
+  for (const seconds of WRONG_LETTER_SECONDS) {
+    const input = h('input', {
+      type: 'radio',
+      name,
+      value: String(seconds),
+      id: `${name}-${seconds}`,
+      checked: app.settings.wrongLetterSeconds === seconds,
+      disabled: app.readOnly,
+    });
+    input.addEventListener('change', () => {
+      if (!input.checked) return;
+      if (app.setSettings({ ...app.settings, wrongLetterSeconds: seconds })) toast('נשמר');
+    });
+    options.appendChild(
+      h('label', { class: 'seg-option', for: input.id }, input, h('span', { dir: 'ltr' }, String(seconds))),
+    );
+  }
+  return h(
+    'section',
+    { class: 'panel', 'data-section': 'settings' },
+    h('h2', { class: 'panel-title' }, 'הגדרות'),
+    h('p', { class: 'setting-label', id: legendId }, 'כמה זמן האות השגויה נשארת במקום (שניות)'),
+    options,
+    h('p', { class: 'muted' }, 'ההגדרה נשמרת במכשיר הזה בלבד ולא נשלחת בקישור.'),
+  );
 }
 
 function shareSection(app: App, sections: Section[]): HTMLElement {

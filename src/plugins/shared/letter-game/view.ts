@@ -2,7 +2,7 @@
  * The letter-tile game screen shared by "מילים מבולגנות" and "אותיות מבלבלות":
  * hear a word, tap (or drag) its letters into the slots in order.
  */
-import { h, icon, delay, prefersReducedMotion } from '../../../ui/dom';
+import { h, icon, delay } from '../../../ui/dom';
 import { ICONS } from '../../../ui/icons';
 import { announce } from '../../../ui/dialog';
 import { defaultRng } from '../../../core/rng';
@@ -106,7 +106,8 @@ export function mountLetterGame(
       announce(message);
       ctx.sounds.play('wrong');
       render({ wrongSlot: result.slot, wrongText: text, wrongTileId: tileId });
-      await delay(prefersReducedMotion() ? 300 : 550);
+      // The parent sets this time on the edit screen; with reduced motion the shake is off but the time stays.
+      await delay(ctx.wrongLetterMs);
       if (destroyed) return;
       busy = false;
       render({ returningTileId: tileId });
