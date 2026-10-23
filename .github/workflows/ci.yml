@@ -13,6 +13,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -26,6 +27,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # A stuck browser download once hung this job; fail fast instead of waiting hours.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
