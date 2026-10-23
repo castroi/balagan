@@ -1177,3 +1177,170 @@ body:has(.screen.edit) {
     transition: none !important;
   }
 }
+
+/* ---------- Home card: a tile may hold a whole word (בחרו את המילה) ---------- */
+.card-tiles .mini-tile {
+  width: auto;
+  min-width: 44px;
+  padding: 0 8px;
+}
+
+/* ---------- Choose Word: 2–4 word buttons ---------- */
+/* Two columns; one full-width column when an option has more than 7 letters (round.ts). */
+.choices {
+  width: 100%;
+  margin-top: 4px;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--tray);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.choices.one {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.choice {
+  --slot: 60px;
+  position: relative;
+  min-height: 76px;
+  padding: 0 6px;
+  border-radius: 16px;
+  border: 3px solid var(--ink);
+  background: var(--tile);
+  box-shadow: 0 5px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tile-font);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.choices.one .choice {
+  min-height: 64px;
+  font-size: 32px;
+}
+
+.choice:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--ink);
+}
+
+/* An odd last option in two columns: centred, the same width as the others (not a hint). */
+.choice.centred {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc((100% - 12px) / 2);
+}
+
+.choice-text {
+  /* room for niqqud below the letters */
+  padding-bottom: 0.12em;
+}
+
+.choice.wrong {
+  background: var(--wrong);
+  animation: shake 0.45s ease;
+}
+
+.choice.right {
+  background: var(--correct);
+}
+
+/* Already tried: faded with a diagonal line, text still readable (same as .tile.dimmed). */
+.choice.dimmed {
+  background:
+    linear-gradient(to top left, transparent calc(50% - 1.5px), var(--muted) calc(50% - 1.5px), var(--muted) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+    #fff3cc;
+  border-color: var(--muted);
+  box-shadow: 0 2px 0 var(--muted);
+  color: var(--muted);
+}
+
+.choice.dimmed:active {
+  transform: none;
+  box-shadow: 0 2px 0 var(--muted);
+}
+
+/* After the word: the right word (✓) above the tried wrong words (crossed out). */
+.word-contrast {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.word-contrast-tried {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.word-tile {
+  --slot: 60px;
+  position: relative;
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 3px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tile-font);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.word-tile.right {
+  background: var(--correct);
+}
+
+.word-tile.crossed {
+  border-color: var(--muted);
+  color: var(--muted);
+  background: var(--surface);
+  text-decoration-line: line-through;
+  text-decoration-color: var(--wrong-ink);
+  text-decoration-thickness: 3px;
+}
+
+/* Editor preview: the correct word (green, ✓) and its wrong words (dashed). */
+.mini-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+  background: var(--tile);
+  font-family: var(--tile-font);
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.mini-word.right {
+  background: var(--correct);
+}
+
+.mini-word.extra {
+  border-style: dashed;
+  background: var(--surface);
+}
+
+.mini-check {
+  width: 16px;
+  height: 16px;
+}
