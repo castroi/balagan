@@ -1012,6 +1012,14 @@ body:has(.screen.edit) {
   height: 104px;
 }
 
+.game.compact .celebrate-points {
+  font-size: 44px;
+}
+
+.game.compact .celebrate-text {
+  font-size: 24px;
+}
+
 .game.compact .speaker-icon {
   width: 52px;
   height: 52px;
@@ -1052,7 +1060,7 @@ body:has(.screen.edit) {
   flex-wrap: wrap;
   justify-content: center;
   gap: 14px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .contrast-pair {
@@ -1061,10 +1069,10 @@ body:has(.screen.edit) {
 }
 
 .contrast-tile {
-  --slot: 46px;
+  --slot: 40px;
   position: relative;
-  width: 46px;
-  height: 54px;
+  width: 40px;
+  height: 46px;
   border-radius: 12px;
   border: 3px solid var(--ink);
   display: flex;
@@ -1072,7 +1080,7 @@ body:has(.screen.edit) {
   justify-content: center;
   font-family: var(--tile-font);
   font-weight: 700;
-  font-size: 28px;
+  font-size: 24px;
   line-height: 1;
   color: var(--ink);
 }
@@ -1105,5 +1113,6 @@ body:has(.screen.edit) {
   *::before,
   *::after {
     animation: none !important;
+    transition: none !important;
   }
 }

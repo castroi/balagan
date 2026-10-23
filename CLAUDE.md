@@ -82,6 +82,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Each activity has its own editor format and its own Save/Clear | Activities are independent; clearing one doesn't touch others |
 | Edit sections collapse with a real button (`aria-expanded`); collapsed shows what's saved; a section with an error never collapses | Several activities make a long page; an error must never be hidden |
 | Every activity's saved content goes into the share link automatically (`App.sharePayload` loops over `PLUGINS`) | One link carries the whole week |
+| A link replaces only the activities it contains, and the question names them (`importedTitles`) | The parent knows what will change; other activities stay |
 | Never change an activity's `id` | It's the key in storage and in share links |
 | Bump `dataVersion` when the data shape changes; `deserialize` keeps reading old versions | Saved data and old links keep working |
 | Add points and save progress in one `ctx.commit(progress, points)` | Points are never counted twice after a reload |
@@ -114,16 +115,17 @@ Same game and rules as Scrambled Words (shared engine), except:
 
 | Rule | Why |
 |---|---|
-| Separate list in its own edit section; each line = the word, then its confusing letters, separated by spaces, commas, periods, `\|` or `;` | The parent chooses the confusions per word; any separator a parent might type works |
+| Separate list in its own edit section; each line = the word, then its confusing letters, separated by spaces, commas, periods, `\|`, `;`, `/`, `-` or the maqaf | The parent chooses the confusions per word; any separator a parent might type works |
 | Confusing letters shown exactly as typed (niqqud only if typed) | The parent controls the content |
 | No limit on confusing letters per word; word + confusing letters ≤ 15 tiles per line, else an error and no saving | The owner's choice; 15 = 3 rows of 5 big tiles on a 360px phone |
-| A confusing letter already in the word (same base letter: niqqud ignored, final = regular, שׁ ≠ שׂ, ג ≠ ג׳) or repeated is dropped with a warning | Two identical-looking tiles where only one is right is unfair |
+| A confusing letter already in the word (same base letter: niqqud ignored, final = regular, שׁ ≠ שׂ but a plain ש equals both, ג ≠ ג׳) or repeated is dropped with a warning | Two identical-looking tiles where only one is right is unfair |
 | One letter per token ("קצ" is an error); a niqqud mark alone is an error | Typos must be visible, not silently guessed |
 | Preview "מה הילד יראה" with the count (e.g. 7/15) under valid content | The parent sees the tray before saving |
-| Wrong tile: the same orange shake + "כמעט! נסו שוב"; then dimmed (diagonal line, readable text, `aria-disabled`) only for the current slot | No new symbols or spoken messages to learn; dimming stops repeated guessing without giving the answer away for later slots |
-| After the word: if a confusing letter was tried, a card shows the right letter (✓) next to the confusing one crossed out, no text | Shows the contrast that's the point of the activity, for kids who can't read yet |
+| Wrong tile: the same orange shake + "כמעט! נסו שוב"; then that letter is dimmed (diagonal line, readable text, `aria-disabled`) only for the current slot — every identical-looking tile dims together, and a dimmed tap isn't a mistake | No new symbols or spoken messages to learn; dimming stops repeated guessing without giving the answer away for later slots |
+| After the word: if a confusing letter was tried, a card shows the right letter (✓) next to the confusing one crossed out, no text; each confusing letter once, at most 3 pairs | Shows the contrast that's the point of the activity, for kids who can't read yet; 3 pairs fit in one row |
+| The right letter is the word letter that sounds alike (groups א/ע/ה, ס/שׂ/צ, כ/ק/ח, ת/ט, ב/ו in `round.ts`), otherwise the letter that was needed | צ tried in כַּעַס must be shown next to ס, not next to כַּ |
 | Points 10 / 7 / 5 as in Scrambled Words | One scoring system |
-| Smaller tiles (54px) and speaker button (104px) in this game only | 15 tiles must fit; Scrambled Words keeps its bigger tiles |
+| Tiles at most 54px and a 104px speaker button in this game only (Scrambled Words: tiles up to 64px, 132px speaker) | 15 tiles and the contrast card must fit on a 360×640 screen without scrolling |
 | Saved progress is keyed by the full lines (word + letters) | Changing a word's letters starts a fresh round |
 | Home card tiles ס / צ | Shows what the activity is about |
 

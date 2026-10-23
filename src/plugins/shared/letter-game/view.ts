@@ -171,6 +171,8 @@ export function mountLetterGame(
 
   // ---------- drag & tap ----------
 
+  const isDimmed = (tileId: number) => round.dimmed.includes(round.tray.find((t) => t?.id === tileId)?.text ?? '');
+
   function wireTile(btn: HTMLButtonElement, tileId: number, tray: HTMLElement) {
     btn.addEventListener('click', () => {
       if (suppressClick?.btn === btn && performance.now() < suppressClick.until) return;
@@ -178,7 +180,7 @@ export function mountLetterGame(
     });
 
     btn.addEventListener('pointerdown', (e) => {
-      if (busy || phase !== 'play' || e.button !== 0 || round.dimmed.includes(tileId)) return;
+      if (busy || phase !== 'play' || e.button !== 0 || isDimmed(tileId)) return;
       const startX = e.clientX;
       const startY = e.clientY;
       let ghost: HTMLElement | null = null;
@@ -306,13 +308,14 @@ export function mountLetterGame(
       // During a wrong-answer shake the tile is shown in the slot, so its tray spot is empty.
       const hidden = hl.wrongTileId === tile.id;
       // A dimmed tile was already tried at this slot; it comes back for the next one.
-      const dimmed = round.dimmed.includes(tile.id);
+      const dimmed = round.dimmed.includes(tile.text);
       const btn = h(
         'button',
         {
           class: `tile${hl.returningTileId === tile.id ? ' returning' : ''}${hidden ? ' away' : ''}${dimmed ? ' dimmed' : ''}`,
           type: 'button',
           'aria-label': `האות ${tile.text}`,
+          'data-tile': tile.id,
           ...(dimmed ? { 'aria-disabled': 'true' } : {}),
         },
         h('span', { class: 'tile-text' }, tile.text),
@@ -374,7 +377,12 @@ export function mountLetterGame(
   }
 
   function celebration() {
-    announce(`כל הכבוד! ${lastPoints} נקודות`);
+    // The contrast card is inside a button, so screen readers hear it here instead.
+    const pairs =
+      options.showConfusions && round.confusions.length
+        ? ` ${round.confusions.map((c) => `${c.right} ולא ${c.wrong}`).join(', ')}`
+        : '';
+    announce(`כל הכבוד! ${lastPoints} נקודות.${pairs}`);
     return h(
       'button',
       {
@@ -416,6 +424,10 @@ export function mountLetterGame(
   function render(hl: Highlight = {}) {
     if (destroyed) return;
     removeDragGhosts();
+    // Re-rendering replaces the tiles; keep keyboard focus in the tray.
+    const focusedTile = root.contains(document.activeElement)
+      ? (document.activeElement as HTMLElement).dataset.tile
+      : undefined;
     root.replaceChildren(topBar());
     if (phase === 'intro') {
       root.appendChild(introView());
@@ -433,7 +445,12 @@ export function mountLetterGame(
       h('p', { class: 'message' }, phase === 'play' ? message : ''),
     );
     root.appendChild(stage);
-    root.appendChild(trayEl(hl));
+    const tray = trayEl(hl);
+    root.appendChild(tray);
+    if (focusedTile !== undefined) {
+      const same = tray.querySelector<HTMLElement>(`.tile[data-tile="${focusedTile}"]:not(.away)`);
+      (same ?? tray.querySelector<HTMLElement>('.tile:not(.away)'))?.focus();
+    }
   }
 
   render();

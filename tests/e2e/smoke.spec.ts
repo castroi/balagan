@@ -48,6 +48,21 @@ test('progress survives closing the app, without extra points', async ({ page })
   expect((await stored(page)).points).toBe(10);
 });
 
+test('a round saved by version 1.0.0 still resumes (progress is keyed by the word list)', async ({ page }) => {
+  await saveWords(page, TEN_WORDS);
+  // The exact progress shape and fingerprint 1.0.0 saved: words joined by newlines.
+  await page.evaluate((words) => {
+    const s = JSON.parse(localStorage.getItem('hebrew-practice')!);
+    s.progress['scrambled-words'] = { fp: words.join('\n'), order: words.map((_, i) => i), index: 3, roundPoints: 30, done: false };
+    localStorage.setItem('hebrew-practice', JSON.stringify(s));
+  }, TEN_WORDS);
+  await page.reload();
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('3 הושלמו');
+  await page.locator('.card[data-plugin="scrambled-words"]').click();
+  await expect(page.locator('.start-btn')).toContainText('ממשיכים');
+  await expect(page.locator('.stage')).toContainText('מילה 4 מתוך 10');
+});
+
 test('share link loads the words on another device', async ({ page, baseURL }) => {
   const link = buildShareLink(`${baseURL}/`, {
     assignments: { 'scrambled-words': { v: 1, d: { words: TEN_WORDS } } },

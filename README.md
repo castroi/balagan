@@ -44,7 +44,7 @@ src/
   plugins/     assignment types — one folder per type
     registry.ts            list of all types
     shared/letter-game/    letter-tile game shared by both types: round logic, progress, game screen
-    scrambled-words/       parse + validation, plugin object
+    scrambled-words/       parse + validation, plugin object (game-state.ts, view.ts, text.ts re-export the shared engine)
     confusing-letters/     parse + validation, editor preview, plugin object
   ui/          home screen, edit screen, dialogs
 tests/unit/    unit tests (Vitest)

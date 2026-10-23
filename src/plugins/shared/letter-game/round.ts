@@ -3,7 +3,7 @@
  * Used by "מילים מבולגנות" (no extra letters) and "אותיות מבלבלות" (with
  * extra, confusing letters mixed into the tray).
  */
-import { splitTiles } from '../../../core/unicode';
+import { baseLetter, splitTiles } from '../../../core/unicode';
 import { scrambleOrder, shuffle } from '../../../core/shuffle';
 import type { Rng } from '../../../core/rng';
 
@@ -29,9 +29,12 @@ export interface WordRound {
   /** Placed tiles per slot. */
   slots: (Tile | null)[];
   mistakes: number;
-  /** Tiles already tried at the current slot (dimmed until that slot is solved). */
-  dimmed: number[];
-  /** Confusing letters tried instead of the right one, shown after the word. */
+  /**
+   * Letters (tile text) already tried at the current slot, dimmed until that
+   * slot is solved. By text, so every identical-looking tile dims together.
+   */
+  dimmed: string[];
+  /** Confusing letters tried instead of the right one, shown after the word (at most MAX_CONFUSIONS). */
   confusions: Confusion[];
 }
 
@@ -43,6 +46,26 @@ export type PlaceResult =
 export interface PlaceOptions {
   /** Dim a wrong tile until the current slot is solved (it can't be tapped again there). */
   dimWrong?: boolean;
+}
+
+/** The contrast card after a word shows at most this many pairs (they fit in one row on a small phone). */
+export const MAX_CONFUSIONS = 3;
+
+// Letters that sound alike (base letters, final = regular). Used to pair a
+// confusing letter with the word letter it was mixed up with.
+const SOUND_GROUPS = [['א', 'ע', 'ה'], ['ס', 'שׂ', 'צ'], ['כ', 'ק', 'ח'], ['ת', 'ט'], ['ב', 'ו']];
+const soundsAlike = (a: string, b: string): boolean => {
+  const x = baseLetter(a);
+  const y = baseLetter(b);
+  return x === y || SOUND_GROUPS.some((g) => g.includes(x) && g.includes(y));
+};
+
+/**
+ * The right letter to show next to a confusing one: the word letter it sounds
+ * like (e.g. ס for צ in כַּעַס), otherwise the letter that was needed.
+ */
+function rightLetterFor(round: WordRound, wrong: string, slot: number): string {
+  return round.expected.find((t) => soundsAlike(t, wrong)) ?? round.expected[slot];
 }
 
 /**
@@ -82,20 +105,23 @@ export function placeTile(
 ): { round: WordRound; result: PlaceResult } {
   const slot = nextSlot(round);
   const trayIndex = round.tray.findIndex((t) => t?.id === tileId);
-  if (slot === -1 || trayIndex === -1 || round.dimmed.includes(tileId)) {
+  const tile = round.tray[trayIndex];
+  if (slot === -1 || !tile || round.dimmed.includes(tile.text)) {
     return { round, result: { kind: 'ignored' } };
   }
 
-  const tile = round.tray[trayIndex] as Tile;
   if (tile.text !== round.expected[slot]) {
-    const confusion = { right: round.expected[slot], wrong: tile.text };
-    const known = round.confusions.some((c) => c.right === confusion.right && c.wrong === confusion.wrong);
+    // Each confusing letter is shown once after the word, and only a few pairs in all.
+    const record =
+      tile.extra && round.confusions.length < MAX_CONFUSIONS && !round.confusions.some((c) => c.wrong === tile.text);
     return {
       round: {
         ...round,
         mistakes: round.mistakes + 1,
-        dimmed: options.dimWrong ? [...round.dimmed, tileId] : round.dimmed,
-        confusions: tile.extra && !known ? [...round.confusions, confusion] : round.confusions,
+        dimmed: options.dimWrong ? [...round.dimmed, tile.text] : round.dimmed,
+        confusions: record
+          ? [...round.confusions, { right: rightLetterFor(round, tile.text, slot), wrong: tile.text }]
+          : round.confusions,
       },
       result: tile.extra ? { kind: 'wrong', slot, extra: true } : { kind: 'wrong', slot },
     };

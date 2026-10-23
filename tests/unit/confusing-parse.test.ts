@@ -19,7 +19,7 @@ describe('confusing letters editor', () => {
   });
 
   it('accepts spaces, commas, periods, | and ; as separators', () => {
-    for (const text of ['כַּעַס ק,צ', 'כַּעַס, ק, צ', 'כַּעַס. ק. צ', 'כַּעַס | ק | צ', 'כַּעַס;ק;צ', 'כַּעַס  ק\tצ']) {
+    for (const text of ['כַּעַס ק,צ', 'כַּעַס, ק, צ', 'כַּעַס. ק. צ', 'כַּעַס | ק | צ', 'כַּעַס;ק;צ', 'כַּעַס  ק\tצ', 'כַּעַס ק/צ', 'כַּעַס ק-צ', 'כַּעַס ק\u05BEצ']) {
       expect(parseConfusing(text).data?.items[0].extras).toEqual(['ק', 'צ']);
     }
   });
@@ -59,9 +59,13 @@ describe('confusing letters editor', () => {
     expect(r.warnings.filter((w) => w.includes('מופיעה פעמיים'))).toHaveLength(2);
   });
 
-  it('treats shin and sin as different letters', () => {
+  it('treats shin and sin as different letters, but a plain ש as the same as both', () => {
     const r = parseConfusing(n('שָׁלוֹם שׂ ס'));
     expect(r.data?.items[0].extras).toEqual([n('שׂ'), 'ס']);
+    const plain = parseConfusing(n('שָׁלוֹם ש ס'));
+    expect(plain.data?.items[0].extras).toEqual(['ס']);
+    expect(plain.warnings).toContain('שורה 1: "ש" כבר נמצאת במילה — לא תוצג');
+    expect(parseConfusing(n('שמש שׁ ס')).data?.items[0].extras).toEqual(['ס']);
   });
 
   it('asks for one letter at a time', () => {
@@ -73,6 +77,7 @@ describe('confusing letters editor', () => {
   it('explains a niqqud mark with no letter, and a non-Hebrew character', () => {
     expect(parseConfusing('כַּעַס ַ').errors).toEqual(['שורה 1: סימן ניקוד U+05B7 בלי אות']);
     expect(parseConfusing('כַּעַס x').errors).toEqual(['שורה 1: התו "x" אינו אות עברית']);
+    expect(parseConfusing("כַּעַס '").errors).toEqual(['שורה 1: גרש "׳" בלי אות']);
   });
 
   it('checks the word with the same rules as Scrambled Words', () => {
@@ -114,6 +119,18 @@ describe('confusing letters stored and shared data', () => {
     for (const bad of [null, 'x', {}, { items: 'x' }, { items: [{ word: 1, extras: [] }] }, { items: [{ word: 'כעס' }] }, { items: [{ word: 'כעס', extras: [1] }] }, { items: [] }]) {
       expect(deserializeConfusing(bad, 1)).toBeNull();
     }
+  });
+
+  it('checks each stored field as it is, without re-splitting it', () => {
+    expect(deserializeConfusing({ items: [{ word: '', extras: ['א', 'ב'] }] }, 1)).toBeNull();
+    expect(deserializeConfusing({ items: [{ word: 'כעס ק', extras: [] }] }, 1)).toBeNull();
+    expect(deserializeConfusing({ items: [{ word: 'כעס', extras: ['ק צ'] }] }, 1)).toBeNull();
+  });
+
+  it('skips editor-only mark rules for stored data', () => {
+    const fiveMarks = 'ב\u05B0\u05B1\u05B2\u05B3\u05B4';
+    expect(parseConfusing(`כעס ${fiveMarks}`).data).toBeNull();
+    expect(deserializeConfusing({ items: [{ word: 'כעס', extras: [fiveMarks] }] }, 1)?.items[0].extras).toHaveLength(1);
   });
 
   it('rejects content the editor would block (multi-letter extra, over 15 tiles)', () => {

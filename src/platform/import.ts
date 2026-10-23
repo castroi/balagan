@@ -31,3 +31,10 @@ export function readImport(input: string, findPlugin: (id: string) => AnyPlugin 
   if (entries.length === 0) return { error: 'לא נמצאו בקישור משימות שאפשר לפתוח' };
   return { entries, skipped };
 }
+
+/**
+ * Names of the activities a link will replace, e.g. "מילים מבולגנות, אותיות מבלבלות".
+ * A link replaces only the activities it contains; the others stay as they are.
+ */
+export const importedTitles = (entries: readonly { plugin: AnyPlugin }[]): string =>
+  entries.map((e) => e.plugin.title).join(', ');

@@ -4,6 +4,7 @@ import type { AnyPlugin } from '../plugins/types';
 import { buildShareLink } from '../platform/share-codec';
 import { APP_VERSION } from '../platform/version';
 import { NEWER_VERSION_MESSAGE } from '../platform/storage';
+import { importedTitles } from '../platform/import';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
 import { confirmDialog, toast } from './dialog';
@@ -126,7 +127,8 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
   function renderHeadSummary() {
     const data = savedText ? app.getAssignment(plugin) : null;
     const n = data === null ? 0 : plugin.speakItems(data).length;
-    headSummary.textContent = expanded ? '' : n === 0 ? '· אין תוכן' : n === 1 ? '· מילה אחת שמורה' : `· ${n} מילים שמורות`;
+    const saved = n === 0 ? '· אין תוכן' : n === 1 ? '· מילה אחת שמורה' : `· ${n} מילים שמורות`;
+    headSummary.textContent = expanded ? '' : isDirty() ? `${saved} · יש שינויים שלא נשמרו` : saved;
   }
 
   function renderVoiceList() {
@@ -315,7 +317,7 @@ function importSection(app: App): HTMLElement {
       feedback.appendChild(h('p', { class: 'msg error' }, result.error));
       return;
     }
-    const ok = await confirmDialog('להחליף את התוכן של השבוע במכשיר הזה?', 'להחליף');
+    const ok = await confirmDialog(`להחליף במכשיר הזה את התוכן של: ${importedTitles(result.entries)}?`, 'להחליף');
     if (!ok) return;
     if (app.applyImport(result.entries) !== 'saved') return;
     app.showEdit();

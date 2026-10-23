@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { seededRng } from '../../src/core/rng';
 import { normalizeText } from '../../src/core/unicode';
-import { createRound, placeTile, type WordRound } from '../../src/plugins/shared/letter-game/round';
+import { createRound, MAX_CONFUSIONS, placeTile, type WordRound } from '../../src/plugins/shared/letter-game/round';
 import { fingerprint, isValidProgress, newProgress } from '../../src/plugins/shared/letter-game/progress';
 
 const word = normalizeText('כַּעַס');
@@ -45,7 +45,8 @@ describe('round with confusing letters', () => {
     const { round, result } = placeTile(r, q, { dimWrong: true });
     expect(result).toEqual({ kind: 'wrong', slot: 0, extra: true });
     expect(round.mistakes).toBe(1);
-    expect(round.dimmed).toEqual([q]);
+    expect(round.dimmed).toEqual(['ק']);
+    // ק sounds like כּ, so the card pairs them (whatever slot it was tried at).
     expect(round.confusions).toEqual([{ right: round.expected[0], wrong: 'ק' }]);
   });
 
@@ -79,18 +80,43 @@ describe('round with confusing letters', () => {
     expect(round.confusions).toEqual([]);
   });
 
-  it('records each confusion once', () => {
-    let r = createRound(word, ['ק', 'צ'], seededRng(1));
-    r = placeTile(r, idOf(r, 'ק'), { dimWrong: true }).round;
+  it('pairs a confusing letter with the word letter it sounds like, not the slot it was tried at', () => {
+    // כַּעַס: צ tried at the first slot is paired with ס; א with עַ; ד (no sound-alike) with the needed כַּ.
+    let r = createRound(word, ['צ', 'א', 'ד'], seededRng(1));
     r = placeTile(r, idOf(r, 'צ'), { dimWrong: true }).round;
-    r = solveNext(r);
-    r = placeTile(r, idOf(r, 'ק'), { dimWrong: true }).round;
+    r = placeTile(r, idOf(r, 'א'), { dimWrong: true }).round;
+    r = placeTile(r, idOf(r, 'ד'), { dimWrong: true }).round;
     expect(r.confusions).toEqual([
-      { right: r.expected[0], wrong: 'ק' },
-      { right: r.expected[0], wrong: 'צ' },
-      { right: r.expected[1], wrong: 'ק' },
+      { right: r.expected[2], wrong: 'צ' },
+      { right: r.expected[1], wrong: 'א' },
+      { right: r.expected[0], wrong: 'ד' },
     ]);
   });
+
+  it('shows each confusing letter once, and at most MAX_CONFUSIONS pairs', () => {
+    let r = createRound(word, ['צ', 'ק', 'א', 'ה'], seededRng(1));
+    r = placeTile(r, idOf(r, 'צ'), { dimWrong: true }).round;
+    r = solveNext(r);
+    r = placeTile(r, idOf(r, 'צ'), { dimWrong: true }).round;
+    expect(r.confusions.map((c) => c.wrong)).toEqual(['צ']);
+    for (const t of ['ק', 'א', 'ה']) r = placeTile(r, idOf(r, t), { dimWrong: true }).round;
+    expect(r.confusions).toHaveLength(MAX_CONFUSIONS);
+    expect(r.mistakes).toBe(5);
+  });
+
+  it('dims every identical-looking tile together', () => {
+    // Two identical א tiles; the first slot needs מ.
+    const r = createRound('מאא', ['ע'], seededRng(4));
+    const [first, second] = r.tray.filter((t) => t?.text === 'א');
+    const { round, result } = placeTile(r, first!.id, { dimWrong: true });
+    expect(result.kind).toBe('wrong');
+    expect(round.dimmed).toEqual(['א']);
+    expect(placeTile(round, second!.id, { dimWrong: true }).result).toEqual({ kind: 'ignored' });
+    // Once מ is placed, both come back and either one is right.
+    const next = solveNext(round);
+    expect(next.dimmed).toEqual([]);
+    expect(placeTile(next, second!.id, { dimWrong: true }).result.kind).toBe('correct');
+  });;
 
   it('completes the word with the extras left in the tray', () => {
     let r = createRound(word, ['ק', 'צ'], seededRng(2));

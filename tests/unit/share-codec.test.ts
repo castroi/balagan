@@ -78,4 +78,21 @@ describe('share links with Confusing Letters', () => {
     expect(decodeShare(link)).toEqual({ ok: true, payload: both });
     expect(link.length).toBeLessThan(2500);
   });
+
+  it('measures the worst case: 20 lines of 15 tiles, all with niqqud, plus 20 Scrambled Words', () => {
+    // 10-letter word + 5 confusing letters, every tile with a vowel and a dagesh.
+    const tile = (letter: string) => `${letter}\u05BC\u05B8`;
+    const word = 'אבגדהוזחטי'.split('').map(tile).join('');
+    const extras = 'למנסע'.split('').map(tile);
+    const worst = {
+      assignments: {
+        'scrambled-words': { v: 1, d: { words: TWENTY_WORDS } },
+        'confusing-letters': { v: 1, d: { items: Array.from({ length: 20 }, () => ({ word, extras })) } },
+      },
+    };
+    const link = buildShareLink('https://example.app/', worst);
+    expect(decodeShare(link)).toEqual({ ok: true, payload: worst });
+    // Long, but far below the ~64k characters browsers and WhatsApp handle; checked by hand in WhatsApp before release.
+    expect(link.length).toBeLessThan(5000);
+  });
 });

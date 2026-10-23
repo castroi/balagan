@@ -2,6 +2,7 @@ import './styles.css';
 import { App } from './app';
 import { NEWER_VERSION_MESSAGE } from './platform/storage';
 import { isImportHash } from './platform/share-codec';
+import { importedTitles } from './platform/import';
 import { confirmDialog, prepareAnnouncer, toast } from './ui/dialog';
 
 const root = document.getElementById('app');
@@ -36,9 +37,10 @@ async function handleShareLink() {
   const hasContent = Object.keys(app.data.assignments).length > 0;
   const unsaved = app.hasUnsavedChanges();
   if (hasContent || unsaved) {
+    const titles = importedTitles(result.entries);
     const question = unsaved
-      ? 'התקבלו משימות חדשות, ויש שינויים שלא נשמרו. להחליף את התוכן של השבוע?'
-      : 'התקבלו משימות חדשות. להחליף את התוכן של השבוע?';
+      ? `התקבלו משימות חדשות, ויש שינויים שלא נשמרו. להחליף את התוכן של: ${titles}?`
+      : `התקבלו משימות חדשות. להחליף את התוכן של: ${titles}?`;
     if (!(await confirmDialog(question, 'להחליף'))) return;
   }
   if (app.applyImport(result.entries) !== 'saved') return;

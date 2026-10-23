@@ -96,6 +96,11 @@ test('a confusing letter: orange shake, then dimmed for this slot; after the wor
   await page.waitForTimeout(100);
   await expect(page.locator('.slot.wrong')).toHaveCount(0);
 
+  // A second, different mistake: 2 mistakes still give 7 points (a counted dimmed tap would make it 3 → 5).
+  await tap(page, 'א');
+  await expect(page.locator('.slot.wrong')).toHaveText('א');
+  await expect(page.locator('.slot.wrong')).toHaveCount(0);
+
   // Solving the slot brings it back.
   await tap(page, n('סַ'));
   await expect(page.locator('.tray .tile.dimmed')).toHaveCount(0);
@@ -141,6 +146,24 @@ test.describe('small phone (360×640)', () => {
     const scrolls = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight);
     expect(scrolls).toBe(false);
   });
+
+  test('the celebration with the contrast card still fits without scrolling', async ({ page }) => {
+    await saveConfusing(page, 'כַּעַס ב ג ד ה ו ז ח ט י ל מ צ');
+    await start(page);
+    // Three confusing letters at the first slot, then the word.
+    for (const t of ['צ', 'ה', 'ב']) {
+      await tap(page, t);
+      await expect(page.locator('.slot.wrong')).toHaveCount(0);
+    }
+    const stageBefore = await page.locator('.slots').boundingBox();
+    for (const t of [n('כַּ'), n('עַ'), 'ס']) await tap(page, t);
+    await expect(page.locator('.celebration .contrast-pair')).toHaveCount(3);
+    const stageAfter = await page.locator('.slots').boundingBox();
+    // The slots don't jump when the celebration replaces the speaker.
+    expect(Math.abs(stageAfter!.y - stageBefore!.y)).toBeLessThanOrEqual(2);
+    const scrolls = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight);
+    expect(scrolls).toBe(false);
+  });
 });
 
 test.describe('share link', () => {
@@ -182,5 +205,21 @@ test.describe('share link', () => {
     await page.evaluate((hash) => (location.hash = hash), new URL(link).hash);
     await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('3 מילים');
     await expect(card(page)).toContainText('2 מילים');
+  });
+
+  test('a link with one activity names it and leaves the other one as it is', async ({ page, baseURL }) => {
+    await saveConfusing(page, 'סַבָּא צ');
+    await page.getByRole('button', { name: 'עריכת משימות' }).click();
+    await page.locator('#input-scrambled-words').fill('כַּעַס');
+    await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'שמירה' }).click();
+    await page.getByRole('button', { name: 'חזרה' }).click();
+
+    const link = buildShareLink(`${baseURL}/`, { assignments: { 'scrambled-words': { v: 1, d: { words: ['עָצוּב', 'פָּגַע'] } } } });
+    await page.evaluate((hash) => (location.hash = hash), new URL(link).hash);
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('להחליף את התוכן של: מילים מבולגנות?');
+    await dialog.getByRole('button', { name: 'להחליף' }).click();
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('2 מילים');
+    await expect(card(page)).toContainText('מילה אחת');
   });
 });
