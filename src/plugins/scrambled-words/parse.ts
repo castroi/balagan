@@ -2,7 +2,8 @@ import { normalizeText, splitTiles } from '../../core/unicode';
 import { isScramblable } from '../../core/shuffle';
 import type { ParseResult } from '../types';
 
-export const MAX_WORDS = 10;
+/** Any number of words from 1 to MAX_WORDS. */
+export const MAX_WORDS = 20;
 export const MAX_TILES = 10;
 
 export interface ScrambledWordsData {
@@ -44,9 +45,6 @@ export function parseWords(text: string): ParseResult<ScrambledWordsData> {
 
   if (lines.length === 0) errors.push('לא הוזנו מילים');
   if (lines.length > MAX_WORDS) errors.push(`אפשר עד ${MAX_WORDS} מילים (הוזנו ${lines.length})`);
-  if (errors.length === 0 && words.length < MAX_WORDS) {
-    warnings.push(`הוזנו ${words.length} מילים מתוך ${MAX_WORDS}`);
-  }
   const dupes = [...new Set(words.filter((w, i) => words.indexOf(w) !== i))];
   if (dupes.length) warnings.push(`מילים שמופיעות פעמיים: ${dupes.join(', ')}`);
 

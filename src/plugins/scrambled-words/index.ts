@@ -1,7 +1,8 @@
 import type { AssignmentPlugin } from '../types';
-import { deserializeWords, parseWords, type ScrambledWordsData } from './parse';
+import { deserializeWords, MAX_TILES, MAX_WORDS, parseWords, type ScrambledWordsData } from './parse';
 import { isValidProgress } from './game-state';
 import { mountScrambledWords } from './view';
+import { doneLabel, wordCountLabel } from './text';
 
 export const scrambledWords: AssignmentPlugin<ScrambledWordsData> = {
   id: 'scrambled-words',
@@ -10,7 +11,7 @@ export const scrambledWords: AssignmentPlugin<ScrambledWordsData> = {
   cardTiles: ['ס', 'כַּ', 'עַ'],
   editor: {
     label: 'מילים מבולגנות',
-    hint: 'מדביקים 10 מילים, מילה אחת בכל שורה, עם ניקוד. עד 10 אותיות במילה.',
+    hint: `מדביקים עד ${MAX_WORDS} מילים, מילה אחת בכל שורה, עם ניקוד. עד ${MAX_TILES} אותיות במילה.`,
     placeholder: 'כַּעַס\nעָצוּב\n…',
   },
   parse: parseWords,
@@ -20,7 +21,7 @@ export const scrambledWords: AssignmentPlugin<ScrambledWordsData> = {
   summary(data, progress) {
     const total = data.words.length;
     const done = isValidProgress(progress, data.words) ? Math.min(progress.index, total) : 0;
-    return { line: `${total} מילים · ${done} הושלמו`, fraction: total ? done / total : 0 };
+    return { line: `${wordCountLabel(total)} · ${doneLabel(done)}`, fraction: total ? done / total : 0 };
   },
   mount: mountScrambledWords,
 };

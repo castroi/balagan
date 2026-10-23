@@ -81,16 +81,17 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 | Rule | Why |
 |---|---|
-| Up to 10 words, one per line; fewer allowed with a warning; more blocked | Weekly list of 10, with flexibility |
+| Any number of words from 1 to 20, one per line; 21+ blocked | The parent decides the list size; the cap keeps share links short and guards against pasting a whole text |
+| Progress dots for up to 10 words; above that a "4 / 20" counter | Dots for many words don't fit next to the buttons on a small phone |
 | Up to 10 letters per word; a word whose letters are all identical is rejected | Tile size; it can't be scrambled |
 | One tile = letter + all its marks (niqqud, dagesh, shin/sin dot, geresh) | Niqqud belongs to its letter |
 | Tiles never in the correct order, and never the reversed word when another order exists | Reversed is an easy giveaway in RTL |
-| Tap places the tile in the next slot; dropping a dragged tile anywhere does the same | One way of placing is clearer for young kids |
+| Tap places the tile in the next slot; dropping a dragged tile anywhere outside the tray does the same; dropping it back on the tray cancels | One way of placing is clearer for young kids; dropping back lets the kid change their mind |
 | Each letter is checked immediately; correct locks, wrong returns to the tray | The owner's choice: instant feedback |
 | Identical-looking letters are interchangeable | Fair to the kid |
 | Points per word: 0 mistakes = 10, 1–2 = 7, 3+ = 5 | Reward accuracy without punishing; chosen over hints |
 | No hint, no skip button, no timer, no distractor letters | Kept simple; a kid can't get stuck with per-letter feedback |
-| After a correct word: say it again, then the next word (tap skips the wait) | Reinforces the spelling |
+| After a correct word: say it again, then the next word (tap skips the wait); skipping or leaving cancels the repeat | Reinforces the spelling; an old word must never play over the next one |
 | Answer slots in one row (shrink to fit); letter tray wraps at 5 per row | Slots aren't tapped; tray tiles must stay big |
 
 ## Not done on purpose (possible later)

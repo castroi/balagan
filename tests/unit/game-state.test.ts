@@ -16,6 +16,10 @@ const word = normalizeText('כַּעַס');
 const idOf = (round: WordRound, text: string) => round.tray.find((t) => t?.text === text)!.id;
 
 describe('word round', () => {
+  it('refuses a word that was never validated', () => {
+    expect(() => createWordRound('abc', seededRng(1))).toThrow();
+  });
+
   it('starts scrambled with all slots empty', () => {
     const r = createWordRound(word, seededRng(1));
     expect(r.expected).toHaveLength(3);
@@ -95,5 +99,12 @@ describe('round progress', () => {
     expect(isValidProgress(p, [...words, 'חָדָשׁ'])).toBe(false);
     expect(isValidProgress(null, words)).toBe(false);
     expect(isValidProgress({ ...p, order: [0, 0, 1] }, words)).toBe(false);
+  });
+
+  it('rejects progress whose "done" flag does not match its position (would crash the game)', () => {
+    const p = newProgress(words, seededRng(10));
+    expect(isValidProgress({ ...p, index: words.length, done: false }, words)).toBe(false);
+    expect(isValidProgress({ ...p, index: 1, done: true }, words)).toBe(false);
+    expect(isValidProgress({ ...p, index: words.length, done: true }, words)).toBe(true);
   });
 });
