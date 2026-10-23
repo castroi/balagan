@@ -64,14 +64,41 @@ export function loadData(store: KeyValueStore | null): AppData {
   }
 }
 
-/** Returns false when the device refused to save (private mode, storage full). */
-export function saveData(store: KeyValueStore | null, data: AppData): boolean {
+/** Schema of what's currently saved, or null when nothing readable is saved. */
+function storedSchema(store: KeyValueStore): number | null {
+  try {
+    const text = store.getItem(STORAGE_KEY);
+    const raw: unknown = text ? JSON.parse(text) : null;
+    return isRecord(raw) && typeof raw.schema === 'number' ? raw.schema : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True when the saved data was written by a newer version of the app (e.g. an
+ * old cached version opened offline). That data must not be overwritten.
+ */
+export function isSavedByNewerVersion(store: KeyValueStore | null): boolean {
   if (!store) return false;
+  const schema = storedSchema(store);
+  return schema !== null && schema > SCHEMA_VERSION;
+}
+
+export type SaveResult = 'saved' | 'failed' | 'newer-version';
+
+/**
+ * 'failed' when the device refused (private mode, storage full);
+ * 'newer-version' when saving would overwrite data from a newer app version.
+ */
+export function saveData(store: KeyValueStore | null, data: AppData): SaveResult {
+  if (!store) return 'failed';
+  if (isSavedByNewerVersion(store)) return 'newer-version';
   try {
     store.setItem(STORAGE_KEY, JSON.stringify(data));
-    return true;
+    return 'saved';
   } catch {
-    return false;
+    return 'failed';
   }
 }
 

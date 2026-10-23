@@ -136,7 +136,8 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
   saveBtn.addEventListener('click', () => {
     const result = plugin.parse(textarea.value);
     if (result.data === null) return;
-    app.setAssignment(plugin, result.data);
+    // Not saved (device refused, or newer data must not be overwritten): the message says why.
+    if (app.setAssignment(plugin, result.data) !== 'saved') return;
     savedText = plugin.toText(result.data);
     textarea.value = savedText;
     renderVoiceList();
@@ -264,8 +265,8 @@ function importSection(app: App): HTMLElement {
     const ok = await confirmDialog('להחליף את התוכן של השבוע במכשיר הזה?', 'להחליף');
     if (!ok) return;
     app.applyImport(result.entries);
-    toast(result.skipped ? 'המשימות נטענו (חלק מהתוכן לא נתמך בגרסה הזו)' : 'המשימות נטענו');
     app.showEdit();
+    toast(result.skipped ? 'המשימות נטענו (חלק מהתוכן לא נתמך בגרסה הזו)' : 'המשימות נטענו');
   }
 
   return h(

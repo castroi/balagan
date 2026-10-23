@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   emptyData,
+  isSavedByNewerVersion,
   loadData,
   migrate,
   saveData,
@@ -19,7 +20,7 @@ describe('storage', () => {
     const data = emptyData();
     data.points = 42;
     data.assignments['scrambled-words'] = { v: 1, data: { words: ['כַּעַס'] } };
-    expect(saveData(store, data)).toBe(true);
+    expect(saveData(store, data)).toBe('saved');
     expect(loadData(store)).toEqual(data);
   });
 
@@ -44,7 +45,7 @@ describe('storage', () => {
       },
     };
     expect(loadData(broken)).toEqual(emptyData());
-    expect(saveData(broken, emptyData())).toBe(false);
+    expect(saveData(broken, emptyData())).toBe('failed');
   });
 
   it('drops malformed parts but keeps valid ones', () => {
@@ -61,5 +62,26 @@ describe('storage', () => {
 
   it('resets data written by a newer version of the app', () => {
     expect(migrate({ schema: 99, points: 5 })).toEqual(emptyData());
+  });
+});
+
+describe('data saved by a newer version of the app', () => {
+  it('is detected and never overwritten', () => {
+    const store = memoryStore();
+    const newer = JSON.stringify({ schema: 99, futureField: 'keep me' });
+    store.map.set(STORAGE_KEY, newer);
+    expect(isSavedByNewerVersion(store)).toBe(true);
+    expect(saveData(store, emptyData())).toBe('newer-version');
+    expect(store.map.get(STORAGE_KEY)).toBe(newer);
+  });
+
+  it('is not reported for current, missing or broken data', () => {
+    const store = memoryStore();
+    expect(isSavedByNewerVersion(store)).toBe(false);
+    store.map.set(STORAGE_KEY, '{oops');
+    expect(isSavedByNewerVersion(store)).toBe(false);
+    saveData(store, emptyData());
+    expect(isSavedByNewerVersion(store)).toBe(false);
+    expect(isSavedByNewerVersion(null)).toBe(false);
   });
 });

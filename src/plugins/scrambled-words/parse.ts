@@ -1,4 +1,4 @@
-import { normalizeText, splitTiles } from '../../core/unicode';
+import { describeChar, hasValidMarks, normalizeText, splitTiles } from '../../core/unicode';
 import { isScramblable } from '../../core/shuffle';
 import type { ParseResult } from '../types';
 
@@ -28,7 +28,12 @@ export function parseWords(text: string): ParseResult<ScrambledWordsData> {
     }
     const split = splitTiles(word);
     if (!split.ok) {
-      errors.push(`שורה ${line}: התו "${split.badChar}" אינו אות עברית`);
+      errors.push(`שורה ${line}: התו ${describeChar(split.badChar)} אינו אות עברית`);
+      return;
+    }
+    const overMarked = split.tiles.find((t) => !hasValidMarks(t));
+    if (overMarked) {
+      errors.push(`שורה ${line}: יותר מדי סימני ניקוד על האות "${overMarked[0]}"`);
       return;
     }
     if (split.tiles.length > MAX_TILES) {

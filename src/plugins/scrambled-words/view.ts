@@ -1,5 +1,6 @@
 import { h, icon, delay, prefersReducedMotion } from '../../ui/dom';
 import { ICONS } from '../../ui/icons';
+import { announce } from '../../ui/dialog';
 import { defaultRng } from '../../core/rng';
 import { pointsForMistakes } from '../../core/scoring';
 import type { GameContext } from '../types';
@@ -69,6 +70,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
       round = next;
       busy = true;
       message = 'כמעט! נסו שוב';
+      announce(message);
       ctx.sounds.play('wrong');
       render({ wrongSlot: result.slot, wrongText: text, wrongTileId: tileId });
       await delay(prefersReducedMotion() ? 300 : 550);
@@ -315,6 +317,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
   }
 
   function celebration() {
+    announce(`כל הכבוד! ${lastPoints} נקודות`);
     return h(
       'button',
       {
@@ -347,7 +350,7 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
       { class: 'stage' },
       phase === 'celebrate' ? celebration() : speakerButton(),
       slotsRow(hl),
-      h('p', { class: 'message', 'aria-live': 'polite' }, phase === 'play' ? message : ''),
+      h('p', { class: 'message' }, phase === 'play' ? message : ''),
     );
     root.appendChild(stage);
     root.appendChild(trayEl(hl));

@@ -45,12 +45,13 @@ export function createSounds(): Sounds {
   return {
     unlock() {
       const c = getCtx();
-      if (c && c.state === 'suspended') void c.resume().catch(() => undefined);
+      if (c && c.state !== 'running' && c.state !== 'closed') void c.resume().catch(() => undefined);
     },
     play(name) {
       const c = getCtx();
       if (!c) return;
-      if (c.state === 'suspended') void c.resume().catch(() => undefined);
+      // iPhone can report 'interrupted' after the app was in the background.
+      if (c.state !== 'running' && c.state !== 'closed') void c.resume().catch(() => undefined);
       const now = c.currentTime + 0.01;
       for (const n of PATTERNS[name]) {
         const osc = c.createOscillator();

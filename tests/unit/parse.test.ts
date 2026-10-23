@@ -74,3 +74,23 @@ describe('deserializeWords', () => {
     expect(deserializeWords({ words: ['abc'] }, 1)).toBeNull();
   });
 });
+
+describe('parseWords — pasted text quirks', () => {
+  it('accepts a geresh typed as iPhone\'s curly apostrophe', () => {
+    const r = parseWords('ג\u2019ירפה');
+    expect(r.errors).toEqual([]);
+    expect(r.data?.words[0]).toBe('ג׳ירפה');
+  });
+
+  it('rejects a letter with hundreds of repeated marks', () => {
+    const r = parseWords('ב' + '\u05BC'.repeat(500) + 'ית');
+    expect(r.data).toBeNull();
+    expect(r.errors[0]).toContain('יותר מדי סימני ניקוד');
+  });
+
+  it('names an invisible character by its code point', () => {
+    const r = parseWords('א\u034Fב');
+    expect(r.data).toBeNull();
+    expect(r.errors[0]).toContain('U+034F');
+  });
+});

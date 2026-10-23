@@ -1,5 +1,6 @@
 import './styles.css';
-import { App } from './app';
+import { App, NEWER_VERSION_MESSAGE } from './app';
+import { isSavedByNewerVersion } from './platform/storage';
 import { isImportHash } from './platform/share-codec';
 import { confirmDialog, toast } from './ui/dialog';
 
@@ -8,6 +9,7 @@ if (!root) throw new Error('Missing #app element');
 
 const app = new App(root);
 app.showHome();
+if (isSavedByNewerVersion(app.store)) toast(NEWER_VERSION_MESSAGE, undefined, 7000);
 
 // Ask the browser not to evict saved words when space is low.
 void navigator.storage?.persist?.().catch(() => undefined);
@@ -29,10 +31,12 @@ async function handleShareLink() {
     : true;
   if (!ok) return;
   app.applyImport(result.entries);
-  toast('המשימות נטענו');
   app.showHome();
+  toast('המשימות נטענו');
 }
 void handleShareLink();
+// A link opened while the app is already open in this tab only changes the hash.
+window.addEventListener('hashchange', () => void handleShareLink());
 
 // Offline support. Network-first, so a new version loads automatically when online.
 const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);

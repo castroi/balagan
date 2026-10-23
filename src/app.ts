@@ -1,4 +1,11 @@
-import { browserStore, loadData, saveData, type AppData, type KeyValueStore } from './platform/storage';
+import {
+  browserStore,
+  loadData,
+  saveData,
+  type AppData,
+  type KeyValueStore,
+  type SaveResult,
+} from './platform/storage';
 import { createSpeaker, type Speaker } from './platform/tts';
 import { createSounds, type Sounds } from './platform/sounds';
 import { decodeShare, type SharePayload } from './platform/share-codec';
@@ -7,6 +14,8 @@ import type { AnyPlugin } from './plugins/types';
 import { renderHome } from './ui/home';
 import { renderEdit } from './ui/edit';
 import { clearToast, toast } from './ui/dialog';
+
+export const NEWER_VERSION_MESSAGE = 'התוכן נשמר בגרסה חדשה יותר של האתר. התחברו לאינטרנט ורעננו כדי לעדכן.';
 
 export class App {
   readonly store: KeyValueStore | null = browserStore();
@@ -17,10 +26,11 @@ export class App {
 
   constructor(readonly root: HTMLElement) {}
 
-  save(): void {
-    if (!saveData(this.store, this.data)) {
-      toast('לא ניתן לשמור במכשיר הזה (אולי גלישה בסתר?)');
-    }
+  save(): SaveResult {
+    const result = saveData(this.store, this.data);
+    if (result === 'failed') toast('לא ניתן לשמור במכשיר הזה (אולי גלישה בסתר?)');
+    if (result === 'newer-version') toast(NEWER_VERSION_MESSAGE, undefined, 7000);
+    return result;
   }
 
   getAssignment(plugin: AnyPlugin): unknown | null {
@@ -28,14 +38,14 @@ export class App {
     return stored ? plugin.deserialize(stored.data, stored.v) : null;
   }
 
-  setAssignment(plugin: AnyPlugin, data: unknown | null): void {
+  setAssignment(plugin: AnyPlugin, data: unknown | null): SaveResult {
     if (data === null) {
       delete this.data.assignments[plugin.id];
       delete this.data.progress[plugin.id];
     } else {
       this.data.assignments[plugin.id] = { v: plugin.dataVersion, data };
     }
-    this.save();
+    return this.save();
   }
 
   sharePayload(): SharePayload | null {
@@ -74,7 +84,9 @@ export class App {
     for (const { plugin, data } of entries) this.setAssignment(plugin, data);
   }
 
+  /** Shows a screen. Messages (toasts) belong to the screen they were shown on. */
   private mount(fn: (container: HTMLElement) => (() => void) | void): void {
+    clearToast();
     this.cleanup?.();
     this.cleanup = null;
     this.root.replaceChildren();
@@ -96,7 +108,6 @@ export class App {
       this.showEdit();
       return;
     }
-    clearToast();
     this.mount((c) =>
       plugin.mount(c, data, {
         speaker: this.speaker,
