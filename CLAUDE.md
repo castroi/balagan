@@ -11,7 +11,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 - **Only the owner merges**, after CI is green and the preview has been checked on a phone when the change is visible. Why: the owner decides what reaches the kid.
 - Small, focused commits with a clear message saying what changed and why.
 - Run `npm run typecheck`, `npm test` and, for UI changes, `npm run test:e2e` before pushing.
-- Commit `package-lock.json` with every dependency change; CI uses `npm ci`. Why: the same tool versions everywhere, so a tool release can't break the build. If `npm install` can't run locally, use the "Update lockfile" workflow in the Actions tab.
+- Commit `package-lock.json` with every dependency change; CI uses `npm ci`. Why: the same tool versions everywhere, so a tool release can't break the build. If `npm install` can't run locally, use the "Update lockfile" workflow in the Actions tab on your branch (never on `main`; it refuses).
 
 ## Platform decisions
 

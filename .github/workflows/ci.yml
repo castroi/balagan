@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Started by the "Update lockfile" workflow after it commits.
+  workflow_dispatch:
 
 permissions:
   contents: read

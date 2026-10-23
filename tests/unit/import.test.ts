@@ -30,8 +30,22 @@ describe('readImport', () => {
     }
   });
 
+  it('returns each activity’s own validated data', () => {
+    const plugin = getPlugin('scrambled-words')!;
+    const result = readImport(code({ 'scrambled-words': words(['\u200Fכַּעַס', 'עָצוּב']) }));
+    expect('entries' in result && result.entries[0].data).toEqual(plugin.deserialize({ words: ['כַּעַס', 'עָצוּב'] }, 1));
+  });
+
+  it('counts a known activity with bad data as skipped when another activity is fine', () => {
+    const lookup = (id: string) => (id === 'a' || id === 'b' ? getPlugin('scrambled-words') : undefined);
+    const result = readImport(code({ a: words(['כַּעַס']), b: words(['abc']) }), lookup);
+    expect('entries' in result && result.entries).toHaveLength(1);
+    expect('entries' in result && result.skipped).toBe(1);
+  });
+
   it('explains empty, broken and newer-format links', () => {
     expect(readImport('')).toEqual({ error: 'לא הודבק קישור' });
+    expect(readImport('   \n ')).toEqual({ error: 'לא הודבק קישור' });
     expect(readImport('https://x.app/#import=1.@@@')).toEqual({ error: 'הקישור לא תקין או שנחתך. נסו להעתיק אותו שוב.' });
     const newer = code({ 'scrambled-words': words(['כַּעַס']) }).replace(/^1\./, '2.');
     expect(readImport(newer)).toEqual({ error: 'הקישור נוצר בגרסה חדשה יותר של האתר. רעננו את האתר ונסו שוב.' });
@@ -41,5 +55,6 @@ describe('readImport', () => {
     const onlyKnown = (id: string) => (id === 'other' ? getPlugin('scrambled-words') : undefined);
     const result = readImport(code({ other: words(['כַּעַס']) }), onlyKnown);
     expect('entries' in result && result.entries).toHaveLength(1);
+    expect('entries' in result && result.skipped).toBe(0);
   });
 });
