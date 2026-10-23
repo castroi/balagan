@@ -170,6 +170,7 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
       {
         label: 'ביטול',
         run: () => {
+          if (app.refuseIfReadOnly()) return;
           if (prevAssignment) app.data.assignments[plugin.id] = prevAssignment;
           if (prevProgress !== undefined) app.data.progress[plugin.id] = prevProgress;
           app.save();

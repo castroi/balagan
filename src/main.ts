@@ -22,7 +22,10 @@ async function handleShareLink() {
   if (!isImportHash(hash)) return;
   history.replaceState(null, '', window.location.pathname + window.location.search);
   // A question is already on screen (e.g. a second link arrived): don't stack another.
-  if (document.querySelector('.overlay')) return;
+  if (document.querySelector('.overlay')) {
+    toast('קודם עונים על השאלה שעל המסך, ואז פותחים את הקישור שוב.', undefined, 6000);
+    return;
+  }
   if (app.refuseIfReadOnly()) return;
 
   const result = app.readImport(hash);

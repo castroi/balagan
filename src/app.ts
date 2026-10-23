@@ -126,10 +126,11 @@ export class App {
     // so keyboard and screen-reader users aren't left on an empty page.
     const active = document.activeElement;
     if (!active || active === document.body || !active.isConnected) {
-      const title = this.root.querySelector<HTMLElement>('h1');
-      if (title) {
-        title.tabIndex = -1;
-        title.focus({ preventScroll: true });
+      // The screen's title, or (game screens have none) its first button.
+      const target = this.root.querySelector<HTMLElement>('h1') ?? this.root.querySelector<HTMLElement>('button');
+      if (target) {
+        if (target.tagName === 'H1') target.tabIndex = -1;
+        target.focus({ preventScroll: true });
       }
     }
   }

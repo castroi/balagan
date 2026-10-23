@@ -131,8 +131,9 @@ test.describe('loading from a link', () => {
     const hash = new URL(linkFor(baseURL!, OTHER_WORDS)).hash;
     await page.evaluate((h) => (location.hash = h), hash);
     await expect(page.getByRole('alertdialog')).toHaveCount(1);
-    await page.evaluate((h) => (location.hash = h), hash);
-    await page.waitForTimeout(200);
+    // Change the hash so the second link is a new navigation.
+    await page.evaluate((h) => (location.hash = h + 'x'), hash);
+    await expect(page.locator('.toast')).toContainText('קודם עונים על השאלה');
     await expect(page.getByRole('alertdialog')).toHaveCount(1);
   });
 
@@ -212,4 +213,27 @@ test('empty answer slots have enough contrast (at least 3:1)', async ({ page }) 
     return [border, background('.slot.empty'), background('.tray'), getComputedStyle(document.body).backgroundColor].slice(1).map((bg) => contrast(border, bg));
   });
   for (const ratio of ratios) expect(ratio).toBeGreaterThanOrEqual(3);
+});
+
+test('game messages are read aloud to screen readers through one live region', async ({ page }) => {
+  await saveWords(page, WORDS);
+  await page.getByRole('button', { name: 'חזרה' }).click();
+  await page.locator('.card').click();
+  await page.locator('.start-btn').click();
+
+  const firstTile = await page.evaluate((key) => {
+    const s = JSON.parse(localStorage.getItem(key)!);
+    const p = s.progress['scrambled-words'];
+    const word: string = s.assignments['scrambled-words'].data.words[p.order[p.index]];
+    return word.match(/^[\u05D0-\u05EA][\u05B0-\u05C7\u05F3]*/)![0];
+  }, KEY);
+  const tiles = page.locator('.tray .tile');
+  const texts = await tiles.allTextContents();
+  await tiles.nth(texts.findIndex((t) => t !== firstTile)).click();
+
+  const live = page.locator('.visually-hidden[aria-live]');
+  await expect(live).toHaveCount(1);
+  await expect(live).toHaveText('כמעט! נסו שוב');
+  // The visible message itself is not a second live region.
+  await expect(page.locator('.message[aria-live]')).toHaveCount(0);
 });
