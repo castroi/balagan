@@ -32,7 +32,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Practice only — nothing is sent anywhere | No accounts, no tracking |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
-| Device settings (e.g. how long the popup with a letter pair stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
+| Device settings (e.g. how long the popup with a right/wrong pair stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
 
 ## Design rules (every activity)
 
@@ -89,7 +89,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Add points and save progress in one `ctx.commit(progress, points)` | Points are never counted twice after a reload |
 | Words/items order random per round; never show the answer directly | Real practice, not memorizing positions |
 
-**Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item.
+**Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item. `npm run test:coverage` prints the coverage report (CI uploads it as `coverage-report`); Choose Word's `parse.ts` and `round.ts` must stay at 95% or more.
 
 **Release:** bump the version in `package.json` (new activity or feature = minor, e.g. 1.0.0 → 1.1.0; fixes = patch), then run the "Manual checks on real phones" list in `README.md`.
 
@@ -124,12 +124,33 @@ Same game and rules as Scrambled Words (shared engine), except:
 | Preview "מה הילד יראה" with the count (e.g. 7/15) under valid content | The parent sees the tray before saving |
 | Wrong tile: the same orange shake + "כמעט! נסו שוב"; then that letter is dimmed (diagonal line, readable text, `aria-disabled`) only for the current slot — every identical-looking tile dims together, and a dimmed tap isn't a mistake | No new symbols or spoken messages to learn; dimming stops repeated guessing without giving the answer away for later slots |
 | After the word: if a confusing letter was tried, a card shows the right letter (✓) next to the confusing one crossed out, no text; each confusing letter once, at most 3 pairs | Shows the contrast that's the point of the activity, for kids who can't read yet; 3 pairs fit in one row |
-| A popup with a letter pair stays the time set in הגדרות (1.5 / 3 / 5 / 8 s, default 3), or until the word is said again if that's later; also with reduce motion; a tap still skips; without a pair it's the normal 1.6 s | The kid needs time to look at the pair; nothing else gets slower |
+| A popup with a letter pair (or a word pair in Choose Word) stays the time set in הגדרות (1.5 / 3 / 5 / 8 s, default 3), or until the word is said again if that's later; also with reduce motion; a tap still skips; without a pair it's the normal 1.6 s | The kid needs time to look at the pair; nothing else gets slower |
 | The right letter is the word letter that sounds alike (groups א/ע/ה, ס/שׂ/צ, כ/ק/ח, ת/ט, ב/ו in `round.ts`), otherwise the letter that was needed | צ tried in כַּעַס must be shown next to ס, not next to כַּ |
 | Points 10 / 7 / 5 as in Scrambled Words | One scoring system |
 | Tiles at most 54px and a 104px speaker button in this game only (Scrambled Words: tiles up to 64px, 132px speaker) | 15 tiles and the contrast card must fit on a 360×640 screen without scrolling |
 | Saved progress is keyed by the full lines (word + letters) | Changing a word's letters starts a fresh round |
 | Home card tiles ס / צ | Shows what the activity is about |
+
+## Choose Word (בחרו את המילה) — decisions
+
+A different kind of game (not letter tiles): its own pure logic (`round.ts`) and view, reusing `progress.ts`, scoring, sounds and speech.
+
+| Rule | Why |
+|---|---|
+| Each line = the correct word first (rightmost), then 1–3 wrong words, same separators as Confusing Letters; 0 or 4+ wrong words is an error | The parent chooses the confusions; the kid chooses between 2 and 4 words |
+| One wrong word (2 options) is allowed with a warning — an accepted exception to "never show the answer directly", since after one mistake only the answer is left | The owner's choice: some words have only one real confusion |
+| All words shown exactly as typed, niqqud included; a warning when only some words of a line have niqqud | The parent controls the content; mixed niqqud gives the answer away |
+| A wrong word identical to the correct one (after `normalizeText`) or repeated is dropped with a warning; words differing only by niqqud are allowed | Two identical options where only one is right is unfair; vowel practice is useful |
+| Up to 20 lines and 10 letters per word; one-letter words are fine (nothing is scrambled) | Same limits as the other activities; long words still fit one full-width button |
+| Options in random order, never reshuffled after a mistake | Real practice; the kid can find the words they already tried |
+| 2 columns (an odd last option centred, same width); 1 full-width column when any option has more than 7 letters (`TWO_COLUMN_MAX_LETTERS`) | Big buttons; long words with niqqud stay readable instead of shrinking |
+| Wrong word: orange shake + "כמעט! נסו שוב", then dimmed (diagonal line, `aria-disabled`, "נוסתה" in its label); a dimmed tap isn't a mistake | Same signals as Confusing Letters |
+| Option labels "אפשרות N: <word>" | Text-to-speech reads look-alike spellings the same; the number tells them apart |
+| After the word: if a wrong word was tried, the correct word (✓) above the tried ones crossed out, no text, for the הגדרות time; otherwise "כל הכבוד!" for 1.6 s. With long words (one column) the card replaces the options while it shows | Shows the contrast, like the letter pair; long words and the card don't both fit 360×640 |
+| Points 10 / 7 / 5 as in the other games (3+ mistakes only possible with 4 options) | One scoring system |
+| 104px speaker button (compact, as Confusing Letters); option text 28px in two columns (7 wide letters fit), 32px in one | No scrolling or cut-off words on a small phone |
+| Saved progress is keyed by the full lines (word + wrong words) | Changing a line starts a fresh round |
+| Home card tiles כַּעַס / קַעַס | Shows what the activity is about |
 
 ## Not done on purpose (possible later)
 

@@ -293,7 +293,7 @@ test.describe('a wrong letter is back to how it was before 1.2.0', () => {
   test('the edit screen no longer offers a wrong-letter time', async ({ page }) => {
     await page.goto('/');
     await openEdit(page);
-    await expect(page.locator('[data-section="settings"]')).toContainText('זוג האותיות');
+    await expect(page.locator('[data-section="settings"]')).toContainText('הנכון מול השגוי');
     await expect(page.locator('[data-section="settings"]')).not.toContainText('האות השגויה');
     await expect(page.locator('[data-section="settings"] input[type="radio"]')).toHaveCount(4);
   });

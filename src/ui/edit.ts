@@ -283,8 +283,8 @@ function settingsSection(app: App): HTMLElement {
     'section',
     { class: 'panel', 'data-section': 'settings' },
     h('h2', { class: 'panel-title' }, 'הגדרות'),
-    h('p', { class: 'setting-label', id: legendId }, 'אותיות מבלבלות: כמה זמן מוצג זוג האותיות אחרי המילה (שניות)'),
-    h('p', { class: 'muted', id: hintId }, 'רק כשהילד ניסה אות מבלבלת. בשאר המקרים "כל הכבוד" מוצג כרגיל.'),
+    h('p', { class: 'setting-label', id: legendId }, 'כמה זמן מוצג הזוג (הנכון מול השגוי) אחרי מילה (שניות)'),
+    h('p', { class: 'muted', id: hintId }, 'ב"אותיות מבלבלות" וב"בחרו את המילה", רק כשהילד טעה. בשאר המקרים "כל הכבוד" מוצג כרגיל.'),
     options,
     h('p', { class: 'muted' }, 'ההגדרה נשמרת במכשיר הזה בלבד ולא נשלחת בקישור.'),
   );

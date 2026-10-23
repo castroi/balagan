@@ -13,7 +13,7 @@ export interface GameContext {
   speaker: Speaker;
   sounds: Sounds;
   totalPoints(): number;
-  /** How long the popup after a word stays when it shows a letter pair (device setting). */
+  /** How long the popup after a word stays when it shows a right/wrong pair (device setting). */
   pairMs: number;
   loadProgress(): unknown;
   /** Saves progress and adds points in one write, so points are never counted twice. */
