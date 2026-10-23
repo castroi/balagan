@@ -905,6 +905,190 @@ body:has(.screen.edit) {
   }
 }
 
+/* ---------- Edit screen: collapsible sections and preview ---------- */
+.panel-head {
+  margin: 0;
+}
+
+.panel-toggle {
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+}
+
+.panel-toggle .chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.panel-toggle[aria-expanded='false'] .chevron {
+  transform: rotate(90deg);
+}
+
+.panel-summary {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel-body[hidden] {
+  display: none;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-title {
+  font-weight: 700;
+}
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.preview-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preview .mini-tile {
+  width: 30px;
+  height: 36px;
+  font-size: 18px;
+  border-radius: 8px;
+}
+
+.mini-tile.extra {
+  border-style: dashed;
+  background: var(--surface);
+}
+
+.preview-count {
+  font-size: 15px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.mini-sep {
+  align-self: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* ---------- Confusing Letters: up to 15 tiles on a 360px phone ---------- */
+.game.compact .stage {
+  padding-top: 20px;
+  gap: 18px;
+}
+
+.game.compact .speaker-wrap,
+.game.compact .celebration {
+  min-height: 140px;
+}
+
+.game.compact .speaker-btn {
+  width: 104px;
+  height: 104px;
+}
+
+.game.compact .speaker-icon {
+  width: 52px;
+  height: 52px;
+}
+
+/* 54px tiles, 8px gaps: still 5 per row, 3 rows for 15 tiles. */
+.game.compact .tray {
+  --gap: 8px;
+  --tile-w: min(54px, calc((var(--page) - 32px - 24px - 4 * var(--gap)) / 5));
+  margin-top: 4px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  gap: 12px var(--gap);
+}
+
+.game.compact .tile {
+  border-radius: 14px;
+}
+
+/* Already tried at this slot: faded with a diagonal line, text still readable. */
+.tile.dimmed {
+  background:
+    linear-gradient(to top left, transparent calc(50% - 1.5px), var(--muted) calc(50% - 1.5px), var(--muted) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+    #fff3cc;
+  border-color: var(--muted);
+  box-shadow: 0 2px 0 var(--muted);
+  color: var(--muted);
+}
+
+.tile.dimmed:active {
+  transform: none;
+  box-shadow: 0 2px 0 var(--muted);
+}
+
+/* After the word: the right letter (✓) next to the confusing one (crossed out). */
+.contrast {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.contrast-pair {
+  display: flex;
+  gap: 8px;
+}
+
+.contrast-tile {
+  --slot: 46px;
+  position: relative;
+  width: 46px;
+  height: 54px;
+  border-radius: 12px;
+  border: 3px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--tile-font);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.contrast-tile.right {
+  background: var(--correct);
+}
+
+.contrast-tile.crossed {
+  border-color: var(--muted);
+  color: var(--muted);
+  background:
+    linear-gradient(to top left, transparent calc(50% - 2px), var(--wrong-ink) calc(50% - 2px), var(--wrong-ink) calc(50% + 2px), transparent calc(50% + 2px)),
+    var(--surface);
+}
+
 @keyframes return-in {
   0% {
     transform: translateY(-24px);

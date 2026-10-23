@@ -70,15 +70,18 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 1. Create `src/plugins/<activity>/` and implement `AssignmentPlugin` (`src/plugins/types.ts`).
 2. Register it in `PLUGINS` in `src/plugins/registry.ts`. The home screen, edit screen, saving, clearing and sharing pick it up automatically.
-3. Follow `src/plugins/scrambled-words/` as the reference:
+3. Follow `src/plugins/confusing-letters/` as the reference:
    - `parse.ts` — the editor's input format, validation and `deserialize`
-   - `game-state.ts` — pure game logic, no DOM, so it can be unit-tested
-   - `view.ts` — the game screen only
    - `index.ts` — the plugin object
+   - `preview.ts` — optional "מה הילד יראה" preview on the edit screen (`preview` in the plugin)
+4. A letter-tile game (hear a word, place its letters) reuses `src/plugins/shared/letter-game/`: `round.ts` (pure logic, no DOM), `progress.ts`, `view.ts` (`mountLetterGame` with options), `word.ts` (word rules). A different kind of game gets its own pure logic file + view.
+5. Give its home card and edit section a `data-plugin` attribute (done by the platform) and scope e2e selectors to it — several activities share the same buttons.
 
 | Rule | Why |
 |---|---|
 | Each activity has its own editor format and its own Save/Clear | Activities are independent; clearing one doesn't touch others |
+| Edit sections collapse with a real button (`aria-expanded`); collapsed shows what's saved; a section with an error never collapses | Several activities make a long page; an error must never be hidden |
+| Every activity's saved content goes into the share link automatically (`App.sharePayload` loops over `PLUGINS`) | One link carries the whole week |
 | Never change an activity's `id` | It's the key in storage and in share links |
 | Bump `dataVersion` when the data shape changes; `deserialize` keeps reading old versions | Saved data and old links keep working |
 | Add points and save progress in one `ctx.commit(progress, points)` | Points are never counted twice after a reload |
@@ -101,10 +104,29 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Each letter is checked immediately; correct locks, wrong returns to the tray | The owner's choice: instant feedback |
 | Identical-looking letters are interchangeable | Fair to the kid |
 | Points per word: 0 mistakes = 10, 1–2 = 7, 3+ = 5 | Reward accuracy without punishing; chosen over hints |
-| No hint, no skip button, no timer, no distractor letters | Kept simple; a kid can't get stuck with per-letter feedback |
+| No hint, no skip button, no timer, no extra letters (extra letters are the Confusing Letters activity) | Kept simple; a kid can't get stuck with per-letter feedback |
 | After a correct word: say it again, then the next word (tap skips the wait); skipping or leaving cancels the repeat | Reinforces the spelling; an old word must never play over the next one |
 | Answer slots in one row (shrink to fit); letter tray wraps at 5 per row | Slots aren't tapped; tray tiles must stay big |
 
+## Confusing Letters (אותיות מבלבלות) — decisions
+
+Same game and rules as Scrambled Words (shared engine), except:
+
+| Rule | Why |
+|---|---|
+| Separate list in its own edit section; each line = the word, then its confusing letters, separated by spaces, commas, periods, `\|` or `;` | The parent chooses the confusions per word; any separator a parent might type works |
+| Confusing letters shown exactly as typed (niqqud only if typed) | The parent controls the content |
+| No limit on confusing letters per word; word + confusing letters ≤ 15 tiles per line, else an error and no saving | The owner's choice; 15 = 3 rows of 5 big tiles on a 360px phone |
+| A confusing letter already in the word (same base letter: niqqud ignored, final = regular, שׁ ≠ שׂ, ג ≠ ג׳) or repeated is dropped with a warning | Two identical-looking tiles where only one is right is unfair |
+| One letter per token ("קצ" is an error); a niqqud mark alone is an error | Typos must be visible, not silently guessed |
+| Preview "מה הילד יראה" with the count (e.g. 7/15) under valid content | The parent sees the tray before saving |
+| Wrong tile: the same orange shake + "כמעט! נסו שוב"; then dimmed (diagonal line, readable text, `aria-disabled`) only for the current slot | No new symbols or spoken messages to learn; dimming stops repeated guessing without giving the answer away for later slots |
+| After the word: if a confusing letter was tried, a card shows the right letter (✓) next to the confusing one crossed out, no text | Shows the contrast that's the point of the activity, for kids who can't read yet |
+| Points 10 / 7 / 5 as in Scrambled Words | One scoring system |
+| Smaller tiles (54px) and speaker button (104px) in this game only | 15 tiles must fit; Scrambled Words keeps its bigger tiles |
+| Saved progress is keyed by the full lines (word + letters) | Changing a word's letters starts a fresh round |
+| Home card tiles ס / צ | Shows what the activity is about |
+
 ## Not done on purpose (possible later)
 
-"Check at the end" mode for older kids, parental gate/PIN, hints, skip button, parent voice recordings, timer, distractor letters, update prompt, spoken instructions for non-readers, phone vibration, bundling fonts in the project (now loaded from Google Fonts; the service worker caches them on install, best effort).
+"Check at the end" mode for older kids, parental gate/PIN, hints, skip button, parent voice recordings, timer, distractor letters in Scrambled Words, update prompt, spoken instructions for non-readers, phone vibration, bundling fonts in the project (now loaded from Google Fonts; the service worker caches them on install, best effort).

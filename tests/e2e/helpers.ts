@@ -50,7 +50,7 @@ export async function saveWords(page: Page, words: string[]) {
   await page.goto('/');
   await page.getByRole('button', { name: 'עריכת משימות' }).click();
   await page.locator('#input-scrambled-words').fill(words.join('\n'));
-  await page.getByRole('button', { name: 'שמירה' }).click();
+  await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'שמירה' }).click();
   await page.getByRole('button', { name: 'חזרה' }).click();
 }
 
@@ -77,7 +77,7 @@ export async function tapTile(page: Page, text: string) {
 }
 
 export async function startGame(page: Page) {
-  await page.locator('.card').click();
+  await page.locator('.card[data-plugin="scrambled-words"]').click();
   await page.locator('.start-btn').click();
   await expect(page.locator('.tray .tile').first()).toBeVisible();
 }

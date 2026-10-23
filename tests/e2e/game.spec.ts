@@ -76,24 +76,24 @@ test.describe('speech around the celebration', () => {
     await clickNow(page, '[aria-label="חזרה לבית"]');
     await page.clock.runFor(3000);
     expect((await spoken(page)).length).toBe(before);
-    await expect(page.locator('.card')).toBeVisible();
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toBeVisible();
   });
 });
 
 test('a single word uses the singular wording from home to the end screen', async ({ page }) => {
   await saveWords(page, ['כַּעַס']);
-  await expect(page.locator('.card')).toContainText('מילה אחת · 0 הושלמו');
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('מילה אחת · 0 הושלמו');
   await startGame(page);
   await solveWord(page);
   await page.locator('.celebration').click();
   await expect(page.locator('.end')).toContainText('השלמת את המילה');
   await page.getByRole('button', { name: 'חזרה לבית' }).last().click();
-  await expect(page.locator('.card')).toContainText('מילה אחת · 1 הושלמה');
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('מילה אחת · 1 הושלמה');
 });
 
 test('a short list of 5 words plays to the end, and "play again" adds no extra points', async ({ page }) => {
   await saveWords(page, TEN_WORDS.slice(0, 5));
-  await expect(page.locator('.card')).toContainText('5 מילים');
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('5 מילים');
   await startGame(page);
   for (let i = 0; i < 5; i++) {
     await solveWord(page);
@@ -138,7 +138,7 @@ test.describe('small phone (360 px wide)', () => {
 
   test('20 words show a counter and the top bar fits', async ({ page }) => {
     await setupWithManyPoints(page, TWENTY_WORDS);
-    await expect(page.locator('.card')).toContainText('20 מילים');
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('20 מילים');
     await startGame(page);
     await expect(page.locator('.counter')).toHaveText('1 / 20');
     await expect(page.locator('.dots')).toHaveCount(0);

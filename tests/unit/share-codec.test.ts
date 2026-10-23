@@ -64,3 +64,18 @@ describe('share links', () => {
     expect(isImportHash('')).toBe(false);
   });
 });
+
+describe('share links with Confusing Letters', () => {
+  it('round-trips a full week of both activities and stays short enough for messaging apps', () => {
+    const items = TWENTY_WORDS.map((word) => ({ word, extras: ['ק', 'צ', 'ה', 'א'] }));
+    const both = {
+      assignments: {
+        'scrambled-words': { v: 1, d: { words: TWENTY_WORDS } },
+        'confusing-letters': { v: 1, d: { items } },
+      },
+    };
+    const link = buildShareLink('https://example.app/', both);
+    expect(decodeShare(link)).toEqual({ ok: true, payload: both });
+    expect(link.length).toBeLessThan(2500);
+  });
+});

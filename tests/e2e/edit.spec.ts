@@ -19,7 +19,7 @@ async function saveWords(page: Page, words: string[]) {
   await page.goto('/');
   await openEdit(page);
   await page.locator('#input-scrambled-words').fill(words.join('\n'));
-  await page.getByRole('button', { name: 'שמירה' }).click();
+  await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'שמירה' }).click();
 }
 
 const linkFor = (baseURL: string, words: string[]) =>
@@ -28,7 +28,7 @@ const linkFor = (baseURL: string, words: string[]) =>
 test.describe('Clear and Undo', () => {
   test('the dialog starts on "ביטול" and Escape cancels without deleting', async ({ page }) => {
     await saveWords(page, WORDS);
-    await page.getByRole('button', { name: 'ניקוי' }).click();
+    await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'ניקוי' }).click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'ביטול' })).toBeFocused();
@@ -45,7 +45,7 @@ test.describe('Clear and Undo', () => {
 
   test('Undo after Clear restores the words and the voice-test list', async ({ page }) => {
     await saveWords(page, WORDS);
-    await page.getByRole('button', { name: 'ניקוי' }).click();
+    await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'ניקוי' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'מחיקה' }).click();
     await expect.poll(() => savedWords(page)).toBeNull();
     await expect(page.locator('#input-scrambled-words')).toHaveValue('');
@@ -59,7 +59,7 @@ test.describe('Clear and Undo', () => {
 
   test('tapping the dimmed background keeps keyboard focus inside the dialog', async ({ page }) => {
     await saveWords(page, WORDS);
-    await page.getByRole('button', { name: 'ניקוי' }).click();
+    await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'ניקוי' }).click();
     await page.mouse.click(5, 5); // the dimmed background
     await page.keyboard.press('Tab');
     const focusedInDialog = await page.evaluate(() => !!document.activeElement?.closest('.dialog'));
@@ -80,7 +80,7 @@ test.describe('Clear and Undo', () => {
 
   test('the Undo message disappears when leaving the edit screen', async ({ page }) => {
     await saveWords(page, WORDS);
-    await page.getByRole('button', { name: 'ניקוי' }).click();
+    await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'ניקוי' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'מחיקה' }).click();
     await expect(page.locator('.toast')).toBeVisible();
     await page.getByRole('button', { name: 'חזרה' }).click();
@@ -91,10 +91,10 @@ test.describe('Clear and Undo', () => {
 test.describe('loading from a link', () => {
   test('a link opened while the app is already open loads the words', async ({ page, baseURL }) => {
     await page.goto('/');
-    await expect(page.locator('.card')).toContainText('עדיין אין תוכן');
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('עדיין אין תוכן');
     // Only the hash changes — the page is not reloaded.
     await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, WORDS)).hash);
-    await expect(page.locator('.card')).toContainText('3 מילים');
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('3 מילים');
     await expect.poll(() => savedWords(page)).toEqual(WORDS);
     expect(await page.evaluate(() => location.hash)).toBe('');
   });
@@ -163,19 +163,19 @@ test.describe('data saved by a newer version of the app', () => {
     await openEdit(page);
     await expect(page.locator('.banner').filter({ hasText: 'גרסה חדשה יותר' })).toBeVisible();
     await page.locator('#input-scrambled-words').fill(WORDS.join('\n'));
-    await page.getByRole('button', { name: 'שמירה' }).click();
+    await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'שמירה' }).click();
     await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
     expect(await stored(page)).toBe(newer);
     // Not even in memory: home still has nothing to play.
     await page.getByRole('button', { name: 'חזרה' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'לצאת' }).click();
-    await expect(page.locator('.card')).toContainText('עדיין אין תוכן');
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('עדיין אין תוכן');
   });
 
   test('a share link is refused and nothing changes', async ({ page, baseURL }) => {
     await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, WORDS)).hash);
     await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
-    await expect(page.locator('.card')).toContainText('עדיין אין תוכן');
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('עדיין אין תוכן');
     expect(await stored(page)).toBe(newer);
   });
 
@@ -192,7 +192,7 @@ test.describe('data saved by a newer version of the app', () => {
 test('empty answer slots have enough contrast (at least 3:1)', async ({ page }) => {
   await saveWords(page, WORDS);
   await page.getByRole('button', { name: 'חזרה' }).click();
-  await page.locator('.card').click();
+  await page.locator('.card[data-plugin="scrambled-words"]').click();
   await page.locator('.start-btn').click();
   const ratios = await page.evaluate(() => {
     const parse = (c: string) => (c.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
@@ -218,7 +218,7 @@ test('empty answer slots have enough contrast (at least 3:1)', async ({ page }) 
 test('game messages are read aloud to screen readers through one live region', async ({ page }) => {
   await saveWords(page, WORDS);
   await page.getByRole('button', { name: 'חזרה' }).click();
-  await page.locator('.card').click();
+  await page.locator('.card[data-plugin="scrambled-words"]').click();
   await page.locator('.start-btn').click();
 
   const firstTile = await page.evaluate((key) => {

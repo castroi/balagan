@@ -90,6 +90,7 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
   textarea.value = savedText;
 
   const feedback = h('div', { class: 'feedback', 'aria-live': 'polite' });
+  const preview = h('div', { class: 'preview-wrap' });
   const status = h('span', { class: 'save-status' });
   const voiceList = h('div', { class: 'voice-list' });
 
@@ -97,6 +98,36 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
   const clearBtn = h('button', { class: 'btn', type: 'button' }, 'ניקוי');
 
   const isDirty = () => textarea.value.trim() !== savedText.trim();
+  let hasErrors = false;
+
+  // Collapsible section: a real button with aria-expanded; collapsed shows what's saved.
+  const bodyId = `section-${plugin.id}`;
+  const headSummary = h('span', { class: 'panel-summary' });
+  const toggle = h(
+    'button',
+    {
+      class: 'panel-toggle',
+      type: 'button',
+      'aria-expanded': 'true',
+      'aria-controls': bodyId,
+      onclick: () => setExpanded(!expanded || hasErrors),
+    },
+    icon(ICONS.chevron, 'icon chevron'),
+    h('span', { class: 'panel-title' }, plugin.editor.label),
+    headSummary,
+  );
+  let expanded = true;
+  function setExpanded(open: boolean) {
+    expanded = open;
+    toggle.setAttribute('aria-expanded', String(open));
+    body.hidden = !open;
+    renderHeadSummary();
+  }
+  function renderHeadSummary() {
+    const data = savedText ? app.getAssignment(plugin) : null;
+    const n = data === null ? 0 : plugin.speakItems(data).length;
+    headSummary.textContent = expanded ? '' : n === 0 ? '· אין תוכן' : n === 1 ? '· מילה אחת שמורה' : `· ${n} מילים שמורות`;
+  }
 
   function renderVoiceList() {
     const data = app.getAssignment(plugin);
@@ -127,7 +158,9 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
 
   function update() {
     feedback.replaceChildren();
+    preview.replaceChildren();
     const empty = textarea.value.trim() === '';
+    hasErrors = false;
     if (empty) {
       saveBtn.disabled = true;
     } else {
@@ -135,10 +168,15 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
       for (const e of result.errors) feedback.appendChild(h('p', { class: 'msg error' }, e));
       for (const w of result.warnings) feedback.appendChild(h('p', { class: 'msg warning' }, w));
       if (result.errors.length === 0) feedback.appendChild(h('p', { class: 'msg ok' }, 'התוכן תקין'));
+      if (result.data !== null && plugin.preview) preview.appendChild(plugin.preview(result.data));
+      hasErrors = result.errors.length > 0;
       saveBtn.disabled = result.data === null || !isDirty();
     }
     clearBtn.disabled = empty && savedText === '';
     status.textContent = isDirty() ? 'יש שינויים שלא נשמרו' : savedText ? 'נשמר' : '';
+    // A section with an error always stays open, so the error is never hidden.
+    if (hasErrors) setExpanded(true);
+    renderHeadSummary();
   }
 
   saveBtn.addEventListener('click', () => {
@@ -185,20 +223,24 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
     );
   });
 
+  const body = h(
+    'div',
+    { class: 'panel-body', id: bodyId },
+    h('p', { class: 'muted', id: `hint-${plugin.id}` }, plugin.editor.hint),
+    textarea,
+    feedback,
+    preview,
+    h('div', { class: 'actions' }, saveBtn, clearBtn, status),
+    voiceList,
+  );
+  textarea.setAttribute('aria-label', plugin.editor.label);
+  textarea.setAttribute('aria-describedby', `hint-${plugin.id}`);
+
   textarea.addEventListener('input', update);
   renderVoiceList();
   update();
 
-  const el = h(
-    'section',
-    { class: 'panel' },
-    h('label', { class: 'panel-title', for: inputId }, plugin.editor.label),
-    h('p', { class: 'muted' }, plugin.editor.hint),
-    textarea,
-    feedback,
-    h('div', { class: 'actions' }, saveBtn, clearBtn, status),
-    voiceList,
-  );
+  const el = h('section', { class: 'panel', 'data-plugin': plugin.id }, h('h2', { class: 'panel-head' }, toggle), body);
   return { el, isDirty };
 }
 

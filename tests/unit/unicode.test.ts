@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describeChar, GERESH, hasValidMarks, normalizeText, splitTiles } from '../../src/core/unicode';
+import { baseLetter, describeChar, GERESH, hasValidMarks, isMark, normalizeText, splitTiles } from '../../src/core/unicode';
 
 const tiles = (word: string) => {
   const r = splitTiles(normalizeText(word));
@@ -87,5 +87,29 @@ describe('describeChar', () => {
     expect(describeChar('!')).toBe('"!"');
     expect(describeChar('\u034F')).toBe('U+034F');
     expect(describeChar('\u05B8')).toBe('U+05B8');
+  });
+});
+
+describe('baseLetter', () => {
+  it('ignores niqqud and dagesh, and treats final forms as regular', () => {
+    expect(baseLetter(normalizeText('צָ'))).toBe('צ');
+    expect(baseLetter('ץ')).toBe('צ');
+    expect(baseLetter(normalizeText('כּ'))).toBe('כ');
+    expect(['ך', 'ם', 'ן', 'ף'].map(baseLetter)).toEqual(['כ', 'מ', 'נ', 'פ']);
+  });
+
+  it('keeps the shin/sin dot and the geresh, which make different letters', () => {
+    expect(baseLetter(normalizeText('שָׁ'))).toBe(normalizeText('שׁ'));
+    expect(baseLetter(normalizeText('שׂ'))).not.toBe(baseLetter(normalizeText('שׁ')));
+    expect(baseLetter(`ג${GERESH}`)).toBe(`ג${GERESH}`);
+  });
+});
+
+describe('isMark', () => {
+  it('is true only for marks that need a letter', () => {
+    expect(isMark('ַ')).toBe(true);
+    expect(isMark(GERESH)).toBe(true);
+    expect(isMark('א')).toBe(false);
+    expect(isMark('x')).toBe(false);
   });
 });
