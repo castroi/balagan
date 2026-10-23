@@ -524,14 +524,15 @@ body:has(.screen.edit) {
 .dots {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .counter {
-  min-width: 72px;
-  height: 40px;
+  min-width: 80px;
+  height: 48px;
   padding: 0 14px;
-  border-radius: 20px;
+  border-radius: 24px;
+  font-variant-numeric: tabular-nums;
   background: var(--surface);
   border: 2px solid var(--ink);
   display: flex;
@@ -542,8 +543,8 @@ body:has(.screen.edit) {
 }
 
 .dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--dot);
@@ -554,8 +555,8 @@ body:has(.screen.edit) {
 }
 
 .dot.current {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   background: var(--surface);
   border: 4px solid var(--accent);
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deserializeWords, MAX_WORDS, parseWords } from '../../src/plugins/scrambled-words/parse';
+import { deserializeWords, parseWords } from '../../src/plugins/scrambled-words/parse';
 import { TEN_WORDS, TWENTY_ONE_WORDS, TWENTY_WORDS } from '../fixtures/words';
 
 const TEN = TEN_WORDS.join('\n');
@@ -15,10 +15,6 @@ describe('parseWords', () => {
   it('ignores blank lines, spaces around words and Windows line endings', () => {
     const r = parseWords(`\n  ${TEN.replace(/\n/g, '\r\n\r\n')}  \n`);
     expect(r.data?.words).toHaveLength(10);
-  });
-
-  it('allows the maximum of 20 words', () => {
-    expect(MAX_WORDS).toBe(20);
   });
 
   it.each([1, 5, 12, 13, 20])('accepts %i words with no warning', (n: number) => {

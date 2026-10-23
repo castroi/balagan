@@ -42,7 +42,7 @@ test('progress survives closing the app, without extra points', async ({ page })
   expect((await stored(page)).points).toBe(10);
 
   await page.reload();
-  await expect(page.locator('.card')).toContainText('1 הושלמו');
+  await expect(page.locator('.card')).toContainText('1 הושלמה');
   await page.locator('.card').click();
   await expect(page.locator('.start-btn')).toContainText('ממשיכים');
   expect((await stored(page)).points).toBe(10);

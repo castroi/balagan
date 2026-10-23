@@ -4,6 +4,7 @@ import { defaultRng } from '../../core/rng';
 import { pointsForMistakes } from '../../core/scoring';
 import type { GameContext } from '../types';
 import type { ScrambledWordsData } from './parse';
+import { wordCountLabel } from './text';
 import {
   completeWord,
   createWordRound,
@@ -30,9 +31,6 @@ const DRAG_THRESHOLD = 10;
 export const MAX_DOTS = 10;
 
 const removeDragGhosts = () => document.querySelectorAll('.drag-ghost').forEach((g) => g.remove());
-
-/** "מילה אחת" / "5 מילים" */
-export const wordCountLabel = (n: number) => (n === 1 ? 'מילה אחת' : `${n} מילים`);
 
 export function mountScrambledWords(container: HTMLElement, data: ScrambledWordsData, ctx: GameContext): () => void {
   const words = data.words;
@@ -200,7 +198,8 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
       btn.addEventListener('pointermove', move);
       btn.addEventListener('pointerup', up);
       btn.addEventListener('pointercancel', cancel);
-      // Capture is lost if the tile is re-rendered mid-drag (e.g. a second finger placed a tile).
+      // If the browser takes the pointer away mid-drag, treat it as a cancelled drag.
+      // (A tile removed by a re-render gets no event; render() removes its ghost instead.)
       btn.addEventListener('lostpointercapture', cancel);
     });
   }
@@ -208,7 +207,8 @@ export function mountScrambledWords(container: HTMLElement, data: ScrambledWords
   // ---------- rendering ----------
 
   function progressIndicator() {
-    const current = Math.min(progress.index + 1, words.length);
+    // While celebrating, the finished word is still the one shown ("1 / 20", not "2 / 20").
+    const current = phase === 'celebrate' ? progress.index : Math.min(progress.index + 1, words.length);
     const label = `מילה ${current} מתוך ${words.length}`;
     // Many words don't fit as dots next to the buttons — show a counter instead.
     if (words.length > MAX_DOTS) {
