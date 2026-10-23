@@ -2,7 +2,10 @@
 
 A small website for practising Hebrew spelling at home. A parent pastes the week's content; the kid plays on a phone. No server and no database — everything is saved on the device, and content moves between devices with a share link.
 
-First assignment type: **Scrambled Words** (מילים מבולגנות). The word is spoken, the letters are scrambled, and the kid puts them back in order.
+Assignment types:
+
+- **Scrambled Words** (מילים מבולגנות): the word is spoken, the letters are scrambled, and the kid puts them back in order.
+- **Confusing Letters** (אותיות מבלבלות): the same game, with letters that sound alike (ס/צ, ק/כ, א/ע/ה…) mixed into the tray. The parent writes each word followed by its confusing letters, e.g. `כַּעַס ק צ ה א`.
 
 ## Run it on your computer
 
@@ -40,7 +43,9 @@ src/
   platform/    storage, share links, text-to-speech, sounds, version
   plugins/     assignment types — one folder per type
     registry.ts            list of all types
-    scrambled-words/       parse + validation, game logic, game screen
+    shared/letter-game/    letter-tile game shared by both types: round logic, progress, game screen
+    scrambled-words/       parse + validation, plugin object (game-state.ts, view.ts, text.ts re-export the shared engine)
+    confusing-letters/     parse + validation, editor preview, plugin object
   ui/          home screen, edit screen, dialogs
 tests/unit/    unit tests (Vitest)
 tests/e2e/     browser smoke tests on phone-sized screens (Playwright)
@@ -62,8 +67,9 @@ Automated tests can't cover these:
 - [ ] iPhone and Android: the word is spoken in Hebrew, with acceptable pronunciation (use the voice-test buttons on the edit screen).
 - [ ] iPhone with the silent switch on: do sounds and speech still play?
 - [ ] Niqqud renders correctly on the tiles, including small tiles in 10-letter words.
+- [ ] Confusing Letters with 15 tiles on the smallest phone you have: all tiles fit without scrolling and are easy to tap.
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
-- [ ] Share link opened from WhatsApp loads the words.
+- [ ] Share link with a full week of both activities (20 words each), sent and opened from WhatsApp, loads both.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
 - [ ] Airplane mode after one online visit: the app still opens, with the Hebrew fonts. On iPhone, that visit must be made from the installed home-screen app (it has its own storage).

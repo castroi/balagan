@@ -1,10 +1,10 @@
-import { describeChar, hasValidMarks, normalizeText, splitTiles } from '../../core/unicode';
-import { isScramblable } from '../../core/shuffle';
+import { normalizeText } from '../../core/unicode';
 import type { ParseResult } from '../types';
+import { checkWord, MAX_TILES } from '../shared/letter-game/word';
 
 /** Any number of words from 1 to MAX_WORDS. */
 export const MAX_WORDS = 20;
-export const MAX_TILES = 10;
+export { MAX_TILES };
 
 export interface ScrambledWordsData {
   words: string[];
@@ -31,22 +31,9 @@ export function parseWords(text: string, { strictMarks = true } = {}): ParseResu
       errors.push(`שורה ${line}: יש לכתוב מילה אחת בלבד בכל שורה`);
       return;
     }
-    const split = splitTiles(word);
-    if (!split.ok) {
-      errors.push(`שורה ${line}: התו ${describeChar(split.badChar)} אינו אות עברית`);
-      return;
-    }
-    const overMarked = strictMarks ? split.tiles.find((t) => !hasValidMarks(t)) : undefined;
-    if (overMarked) {
-      errors.push(`שורה ${line}: יותר מדי סימני ניקוד על האות "${overMarked[0]}"`);
-      return;
-    }
-    if (split.tiles.length > MAX_TILES) {
-      errors.push(`שורה ${line}: "${word}" ארוכה מ-${MAX_TILES} אותיות`);
-      return;
-    }
-    if (!isScramblable(split.tiles)) {
-      errors.push(`שורה ${line}: אי אפשר לבלגן את "${word}" — צריך לפחות שתי אותיות שונות`);
+    const checked = checkWord(word, strictMarks);
+    if ('error' in checked) {
+      errors.push(`שורה ${line}: ${checked.error}`);
       return;
     }
     words.push(word);

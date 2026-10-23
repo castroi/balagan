@@ -9,13 +9,14 @@ export function renderHome(container: HTMLElement, app: App): void {
     const decor = h(
       'div',
       { class: 'card-tiles', 'aria-hidden': 'true' },
-      ...plugin.cardTiles.map((t) => h('span', { class: 'mini-tile' }, t)),
+      // "/" is drawn as a separator between tiles, not as a tile.
+      ...plugin.cardTiles.map((t) => h('span', { class: t === '/' ? 'mini-sep' : 'mini-tile' }, t)),
     );
 
     if (data === null) {
       return h(
         'button',
-        { class: 'card card-empty', type: 'button', onclick: () => app.showEdit() },
+        { class: 'card card-empty', type: 'button', 'data-plugin': plugin.id, onclick: () => app.showEdit() },
         decor,
         h('span', { class: 'card-title' }, plugin.title),
         h('span', { class: 'muted' }, 'עדיין אין תוכן — הוסיפו במסך העריכה'),
@@ -25,7 +26,7 @@ export function renderHome(container: HTMLElement, app: App): void {
     const { line, fraction } = plugin.summary(data, app.data.progress[plugin.id]);
     return h(
       'button',
-      { class: 'card', type: 'button', onclick: () => app.showGame(plugin) },
+      { class: 'card', type: 'button', 'data-plugin': plugin.id, onclick: () => app.showGame(plugin) },
       decor,
       h(
         'span',

@@ -29,7 +29,7 @@ export interface AssignmentPlugin<D> {
   /** Version of the data shape; bump it and handle old versions in `deserialize`. */
   dataVersion: number;
   title: string;
-  /** Up to three letters shown as decoration on the home card. */
+  /** Up to three letters shown as decoration on the home card ("/" draws a separator). */
   cardTiles: string[];
   editor: { label: string; hint: string; placeholder: string };
 
@@ -40,6 +40,8 @@ export interface AssignmentPlugin<D> {
   /** Items the parent can listen to in the editor (voice test). */
   speakItems(data: D): string[];
   summary(data: D, progress: unknown): { line: string; fraction: number };
+  /** Optional "what the kid will see" preview, shown under valid editor content. */
+  preview?(data: D): HTMLElement;
 
   /** Mounts the game; returns a cleanup function. */
   mount(container: HTMLElement, data: D, ctx: GameContext): () => void;

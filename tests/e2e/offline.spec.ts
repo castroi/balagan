@@ -22,9 +22,9 @@ test('the app opens and works offline after a single online visit', async ({ pag
   // Still usable offline: open the editor and save words.
   await page.getByRole('button', { name: 'עריכת משימות' }).click();
   await page.locator('#input-scrambled-words').fill('כַּעַס\nעָצוּב');
-  await page.getByRole('button', { name: 'שמירה' }).click();
+  await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'שמירה' }).click();
   await page.getByRole('button', { name: 'חזרה' }).click();
-  await expect(page.locator('.card')).toBeVisible();
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toBeVisible();
 });
 
 test('the service worker is generated with this build’s files', async ({ request }) => {

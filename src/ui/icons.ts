@@ -12,6 +12,7 @@ export const ICONS = {
   // Media "play" keeps pointing right in RTL layouts.
   play: svg('<path d="M7 4l11 8-11 8z" fill="currentColor"/>'),
   star: `<svg viewBox="0 0 24 24" fill="#F5B82E" stroke="#1F2A44" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>`,
+  chevron: svg('<path d="M6 9l6 6 6-6"/>'),
   check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   again: svg('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>'),
   link: svg(

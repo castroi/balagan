@@ -5,7 +5,7 @@ import { currentTiles, saveWords, startGame, stored, tapTile, solveWord } from '
 
 test('parent saves words, kid completes a word with one mistake', async ({ page }) => {
   await saveWords(page, TEN_WORDS);
-  await expect(page.locator('.card')).toContainText('10 מילים · 0 הושלמו');
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('10 מילים · 0 הושלמו');
   await startGame(page);
 
   const tiles = await currentTiles(page);
@@ -42,10 +42,25 @@ test('progress survives closing the app, without extra points', async ({ page })
   expect((await stored(page)).points).toBe(10);
 
   await page.reload();
-  await expect(page.locator('.card')).toContainText('1 הושלמה');
-  await page.locator('.card').click();
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('1 הושלמה');
+  await page.locator('.card[data-plugin="scrambled-words"]').click();
   await expect(page.locator('.start-btn')).toContainText('ממשיכים');
   expect((await stored(page)).points).toBe(10);
+});
+
+test('a round saved by version 1.0.0 still resumes (progress is keyed by the word list)', async ({ page }) => {
+  await saveWords(page, TEN_WORDS);
+  // The exact progress shape and fingerprint 1.0.0 saved: words joined by newlines.
+  await page.evaluate((words) => {
+    const s = JSON.parse(localStorage.getItem('hebrew-practice')!);
+    s.progress['scrambled-words'] = { fp: words.join('\n'), order: words.map((_, i) => i), index: 3, roundPoints: 30, done: false };
+    localStorage.setItem('hebrew-practice', JSON.stringify(s));
+  }, TEN_WORDS);
+  await page.reload();
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('3 הושלמו');
+  await page.locator('.card[data-plugin="scrambled-words"]').click();
+  await expect(page.locator('.start-btn')).toContainText('ממשיכים');
+  await expect(page.locator('.stage')).toContainText('מילה 4 מתוך 10');
 });
 
 test('share link loads the words on another device', async ({ page, baseURL }) => {
@@ -53,7 +68,7 @@ test('share link loads the words on another device', async ({ page, baseURL }) =
     assignments: { 'scrambled-words': { v: 1, d: { words: TEN_WORDS } } },
   });
   await page.goto(link);
-  await expect(page.locator('.card')).toContainText('10 מילים');
+  await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('10 מילים');
   expect(await page.evaluate(() => location.hash)).toBe('');
   expect((await stored(page)).assignments['scrambled-words'].data.words).toHaveLength(10);
 });
@@ -63,5 +78,5 @@ test('editor blocks invalid content', async ({ page }) => {
   await page.getByRole('button', { name: 'עריכת משימות' }).click();
   await page.locator('#input-scrambled-words').fill('שָׁלוֹם\nabc');
   await expect(page.locator('.msg.error')).toContainText('אינו אות עברית');
-  await expect(page.getByRole('button', { name: 'שמירה' })).toBeDisabled();
+  await expect(page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'שמירה' })).toBeDisabled();
 });

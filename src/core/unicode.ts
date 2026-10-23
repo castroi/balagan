@@ -76,3 +76,21 @@ export function describeChar(char: string): string {
   const code = `U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`;
   return visible ? `"${char}"` : code;
 }
+
+// Final forms and their regular letters: ך→כ, ם→מ, ן→נ, ף→פ, ץ→צ.
+const FINALS: Record<string, string> = { ך: 'כ', ם: 'מ', ן: 'נ', ף: 'פ', ץ: 'צ' };
+// Niqqud and dagesh. Not the shin/sin dots or the geresh: שׁ/שׂ and ג/ג׳ are different letters.
+const NIQQUD = /[\u05B0-\u05BD\u05BF\u05C4\u05C5\u05C7]/g;
+
+/**
+ * The letter a tile shows, ignoring niqqud and dagesh, with final forms
+ * equal to their regular forms. Used to spot an extra letter that's already in
+ * the word (e.g. "ץ" and "צָ" are both "צ").
+ */
+export function baseLetter(tile: string): string {
+  const letter = tile.replace(NIQQUD, '');
+  return (FINALS[letter[0]] ?? letter[0]) + letter.slice(1);
+}
+
+/** True for a niqqud mark (or geresh) — a character that needs a letter before it. */
+export const isMark = (char: string): boolean => new RegExp(`^[${MARK_CLASS}${GERESH}]$`).test(char);

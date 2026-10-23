@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readImport } from '../../src/platform/import';
+import { importedTitles, readImport } from '../../src/platform/import';
 import { encodeShareCode } from '../../src/platform/share-codec';
 import { getPlugin } from '../../src/plugins/registry';
 
@@ -56,5 +56,35 @@ describe('readImport', () => {
     const result = readImport(code({ other: words(['כַּעַס']) }), onlyKnown);
     expect('entries' in result && result.entries).toHaveLength(1);
     expect('entries' in result && result.skipped).toBe(0);
+  });
+});
+
+describe('share link with both activities', () => {
+  const confusing = { v: 1, d: { items: [{ word: 'כַּעַס', extras: ['ק', 'צ'] }, { word: 'סַבָּא', extras: ['צ'] }] } };
+
+  it('loads Scrambled Words and Confusing Letters from one link', () => {
+    const result = readImport(code({ 'scrambled-words': words(['כַּעַס', 'עָצוּב']), 'confusing-letters': confusing }));
+    expect('entries' in result && result.entries.map((e) => e.plugin.id).sort()).toEqual([
+      'confusing-letters',
+      'scrambled-words',
+    ]);
+    const entry = 'entries' in result ? result.entries.find((e) => e.plugin.id === 'confusing-letters') : undefined;
+    expect(entry?.data).toEqual(getPlugin('confusing-letters')!.deserialize(confusing.d, 1));
+  });
+
+  it('skips broken Confusing Letters data but keeps the other activity', () => {
+    const bad = { v: 1, d: { items: [{ word: 'כַּעַס', extras: ['קצ'] }] } };
+    const result = readImport(code({ 'scrambled-words': words(['כַּעַס']), 'confusing-letters': bad }));
+    expect('entries' in result && result.entries.map((e) => e.plugin.id)).toEqual(['scrambled-words']);
+    expect('entries' in result && result.skipped).toBe(1);
+  });
+});
+
+describe('importedTitles', () => {
+  it('names the activities the link will replace', () => {
+    const result = readImport(
+      code({ 'scrambled-words': words(['כַּעַס']), 'confusing-letters': { v: 1, d: { items: [{ word: 'כַּעַס', extras: ['ק'] }] } } }),
+    );
+    expect('entries' in result && importedTitles(result.entries)).toBe('מילים מבולגנות, אותיות מבלבלות');
   });
 });
