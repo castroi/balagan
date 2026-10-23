@@ -1012,6 +1012,23 @@ body:has(.screen.edit) {
   position: relative;
   min-height: 44px;
   display: flex;
+  cursor: pointer;
+}
+
+/* The radio stays in the page for keyboards and screen readers; the span after it is what's seen. */
+.seg-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.seg-option span {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--line);
@@ -1019,32 +1036,25 @@ body:has(.screen.edit) {
   background: var(--surface);
   font-size: 18px;
   font-weight: 700;
-  cursor: pointer;
 }
 
-/* The radio stays in the page for keyboards and screen readers; the label is what's seen. */
-.seg-option input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.seg-option:has(input:checked) {
+.seg-option input:checked + span {
   background: var(--accent);
   border-color: var(--ink);
   color: #fff;
 }
 
-.seg-option:has(input:focus-visible) {
+.seg-option input:focus-visible + span {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
 
-.seg-option:has(input:disabled) {
-  opacity: 0.6;
+.seg-option input:disabled {
   cursor: default;
+}
+
+.seg-option input:disabled + span {
+  opacity: 0.6;
 }
 
 /* ---------- Confusing Letters: up to 15 tiles on a 360px phone ---------- */

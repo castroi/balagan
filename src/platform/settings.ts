@@ -35,11 +35,21 @@ export function loadSettings(store: KeyValueStore | null): Settings {
   return settings;
 }
 
-/** False when the device refused to save (private mode, storage full). */
+/**
+ * Saves the settings, keeping any fields this version doesn't know (written
+ * by a newer version). False when the device refused (private mode, storage full).
+ */
 export function saveSettings(store: KeyValueStore | null, settings: Settings): boolean {
   if (!store) return false;
   try {
-    store.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    let saved: unknown = null;
+    try {
+      saved = JSON.parse(store.getItem(SETTINGS_KEY) ?? 'null');
+    } catch {
+      /* unreadable: replaced */
+    }
+    const keep = typeof saved === 'object' && saved !== null && !Array.isArray(saved) ? saved : {};
+    store.setItem(SETTINGS_KEY, JSON.stringify({ ...keep, ...settings }));
     return true;
   } catch {
     return false;

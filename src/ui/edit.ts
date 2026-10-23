@@ -261,10 +261,18 @@ function settingsSection(app: App): HTMLElement {
       id: `${name}-${seconds}`,
       checked: app.settings.wrongLetterSeconds === seconds,
       disabled: app.readOnly,
+      'aria-label': `${seconds} שניות`,
     });
     input.addEventListener('change', () => {
       if (!input.checked) return;
-      if (app.setSettings({ ...app.settings, wrongLetterSeconds: seconds })) toast('נשמר');
+      if (app.setSettings({ ...app.settings, wrongLetterSeconds: seconds })) {
+        toast('נשמר');
+      } else {
+        // Not saved: show the value the game will really use.
+        options
+          .querySelectorAll<HTMLInputElement>('input')
+          .forEach((i) => (i.checked = Number(i.value) === app.settings.wrongLetterSeconds));
+      }
     });
     options.appendChild(
       h('label', { class: 'seg-option', for: input.id }, input, h('span', { dir: 'ltr' }, String(seconds))),

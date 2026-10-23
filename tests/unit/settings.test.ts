@@ -59,3 +59,17 @@ describe('device settings', () => {
     expect(loadData(store).points).toBe(5);
   });
 });
+
+describe('settings saved by a newer version', () => {
+  it('keeps fields this version does not know when saving', () => {
+    const store = memoryStore({ [SETTINGS_KEY]: JSON.stringify({ wrongLetterSeconds: 2, voiceRate: 0.8 }) });
+    saveSettings(store, { wrongLetterSeconds: 3 });
+    expect(JSON.parse(store.map[SETTINGS_KEY])).toEqual({ wrongLetterSeconds: 3, voiceRate: 0.8 });
+  });
+
+  it('replaces unreadable saved settings', () => {
+    const store = memoryStore({ [SETTINGS_KEY]: '{broken' });
+    expect(saveSettings(store, { wrongLetterSeconds: 1 })).toBe(true);
+    expect(JSON.parse(store.map[SETTINGS_KEY])).toEqual({ wrongLetterSeconds: 1 });
+  });
+});
