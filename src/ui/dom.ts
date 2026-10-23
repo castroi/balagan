@@ -43,3 +43,6 @@ export function icon(svgMarkup: string, className = 'icon'): SVGElement {
 }
 
 export const delay = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
+
+export const prefersReducedMotion = () =>
+  typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

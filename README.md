@@ -7,7 +7,7 @@ Assignment types:
 - **Scrambled Words** (מילים מבולגנות): the word is spoken, the letters are scrambled, and the kid puts them back in order.
 - **Confusing Letters** (אותיות מבלבלות): the same game, with letters that sound alike (ס/צ, ק/כ, א/ע/ה…) mixed into the tray. The parent writes each word followed by its confusing letters, e.g. `כַּעַס ק צ ה א`.
 
-On the edit screen, **הגדרות** sets how long a wrong letter stays in its slot (0.5–3 seconds, default 1.5). It's saved on that device only.
+On the edit screen, **הגדרות** sets how long the popup after a word stays when it shows a letter pair in Confusing Letters (1.5–8 seconds, default 3). Every other popup keeps its normal length. It's saved on that device only.
 
 ## Run it on your computer
 
@@ -71,7 +71,7 @@ Automated tests can't cover these:
 - [ ] Niqqud renders correctly on the tiles, including small tiles in 10-letter words.
 - [ ] Confusing Letters with 15 tiles on the smallest phone you have: all tiles fit without scrolling and are easy to tap.
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
-- [ ] Edit screen → הגדרות: the chosen time for a wrong letter feels right for the kid.
+- [ ] Edit screen → הגדרות: the time the letter pair stays after a word feels right for the kid.
 - [ ] Share link with a full week of both activities (20 words each), sent and opened from WhatsApp, loads both.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.

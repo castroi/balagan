@@ -7,31 +7,39 @@ import type { KeyValueStore } from './storage';
 
 export const SETTINGS_KEY = 'hebrew-practice:settings';
 
-/** How long a wrong letter stays in the slot before going back to the tray. */
-export const WRONG_LETTER_SECONDS = [0.5, 1, 1.5, 2, 3] as const;
-export const DEFAULT_WRONG_LETTER_SECONDS = 1.5;
+/**
+ * How long the popup after a word stays when it shows the letter pair (the
+ * right letter next to the confusing one). Only Confusing Letters shows it.
+ */
+export const PAIR_SECONDS = [1.5, 3, 5, 8] as const;
+export const DEFAULT_PAIR_SECONDS = 3;
 
 export interface Settings {
-  wrongLetterSeconds: number;
+  pairSeconds: number;
 }
 
-export const defaultSettings = (): Settings => ({ wrongLetterSeconds: DEFAULT_WRONG_LETTER_SECONDS });
+/** Fields of older versions that are no longer used; removed on the next save. */
+const RETIRED = ['wrongLetterSeconds'];
 
-const isOption = (v: unknown): v is number => WRONG_LETTER_SECONDS.some((s) => s === v);
+export const defaultSettings = (): Settings => ({ pairSeconds: DEFAULT_PAIR_SECONDS });
+
+const isOption = (v: unknown): v is number => PAIR_SECONDS.some((s) => s === v);
+
+const readRaw = (store: KeyValueStore): Record<string, unknown> => {
+  try {
+    const raw: unknown = JSON.parse(store.getItem(SETTINGS_KEY) ?? 'null');
+    return typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+};
 
 /** Saved settings; anything missing or invalid falls back to its default. */
 export function loadSettings(store: KeyValueStore | null): Settings {
   const settings = defaultSettings();
   if (!store) return settings;
-  try {
-    const raw: unknown = JSON.parse(store.getItem(SETTINGS_KEY) ?? 'null');
-    if (typeof raw === 'object' && raw !== null) {
-      const seconds = (raw as Partial<Settings>).wrongLetterSeconds;
-      if (isOption(seconds)) settings.wrongLetterSeconds = seconds;
-    }
-  } catch {
-    /* unreadable: defaults */
-  }
+  const seconds = readRaw(store).pairSeconds;
+  if (isOption(seconds)) settings.pairSeconds = seconds;
   return settings;
 }
 
@@ -42,13 +50,8 @@ export function loadSettings(store: KeyValueStore | null): Settings {
 export function saveSettings(store: KeyValueStore | null, settings: Settings): boolean {
   if (!store) return false;
   try {
-    let saved: unknown = null;
-    try {
-      saved = JSON.parse(store.getItem(SETTINGS_KEY) ?? 'null');
-    } catch {
-      /* unreadable: replaced */
-    }
-    const keep = typeof saved === 'object' && saved !== null && !Array.isArray(saved) ? saved : {};
+    const keep = readRaw(store);
+    for (const key of RETIRED) delete keep[key];
     store.setItem(SETTINGS_KEY, JSON.stringify({ ...keep, ...settings }));
     return true;
   } catch {

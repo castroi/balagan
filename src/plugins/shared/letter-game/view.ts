@@ -2,7 +2,7 @@
  * The letter-tile game screen shared by "מילים מבולגנות" and "אותיות מבלבלות":
  * hear a word, tap (or drag) its letters into the slots in order.
  */
-import { h, icon, delay } from '../../../ui/dom';
+import { h, icon, delay, prefersReducedMotion } from '../../../ui/dom';
 import { ICONS } from '../../../ui/icons';
 import { announce } from '../../../ui/dialog';
 import { defaultRng } from '../../../core/rng';
@@ -38,6 +38,8 @@ interface Highlight {
 }
 
 const DRAG_THRESHOLD = 10;
+/** How long the popup after a word stays (at least until the word is said again). */
+export const CELEBRATION_MS = 1600;
 /** Above this many words the progress dots become a "4 / 20" counter. */
 export const MAX_DOTS = 10;
 
@@ -93,21 +95,7 @@ export function mountLetterGame(
     speakCurrent();
   }
 
-  // While a wrong letter is shown in its slot (for the time set on the edit screen).
-  let wrongWait: { timer: number; tileId: number } | null = null;
-
-  /** Sends the wrong letter back to the tray now. */
-  function finishWrong() {
-    if (!wrongWait) return;
-    window.clearTimeout(wrongWait.timer);
-    const { tileId } = wrongWait;
-    wrongWait = null;
-    render({ returningTileId: tileId });
-  }
-
   async function onPlace(tileId: number) {
-    // Tapping another letter while the wrong one is shown doesn't wait: the wrong one goes back first.
-    finishWrong();
     if (busy || phase !== 'play') return;
     const { round: next, result } = placeTile(round, tileId, { dimWrong: options.dimWrong });
     if (result.kind === 'ignored') return;
@@ -115,12 +103,15 @@ export function mountLetterGame(
     if (result.kind === 'wrong') {
       const text = round.tray.find((t) => t?.id === tileId)?.text ?? '';
       round = next;
+      busy = true;
       message = 'כמעט! נסו שוב';
       announce(message);
       ctx.sounds.play('wrong');
       render({ wrongSlot: result.slot, wrongText: text, wrongTileId: tileId });
-      // The parent sets this time on the edit screen; with reduced motion the shake is off but the time stays.
-      wrongWait = { tileId, timer: window.setTimeout(finishWrong, ctx.wrongLetterMs) };
+      await delay(prefersReducedMotion() ? 300 : 550);
+      if (destroyed) return;
+      busy = false;
+      render({ returningTileId: tileId });
       return;
     }
 
@@ -153,7 +144,9 @@ export function mountLetterGame(
       }, 500);
     });
     const skipped = new Promise<void>((resolve) => (skipCelebration = resolve));
-    await Promise.race([skipped, Promise.all([delay(1600), repeated])]);
+    // A letter pair (Confusing Letters) stays the time set on the edit screen; every other popup 1.6 s.
+    const showsPair = Boolean(options.showConfusions) && round.confusions.length > 0;
+    await Promise.race([skipped, Promise.all([delay(showsPair ? ctx.pairMs : CELEBRATION_MS), repeated])]);
     cancelRepeat();
     skipCelebration = null;
     if (destroyed) return;
@@ -468,7 +461,6 @@ export function mountLetterGame(
 
   return () => {
     destroyed = true;
-    if (wrongWait) window.clearTimeout(wrongWait.timer);
     cancelRepeat();
     skipCelebration?.();
     ctx.speaker.cancel();

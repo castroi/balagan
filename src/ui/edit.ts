@@ -5,7 +5,7 @@ import { buildShareLink } from '../platform/share-codec';
 import { APP_VERSION } from '../platform/version';
 import { NEWER_VERSION_MESSAGE } from '../platform/storage';
 import { importedTitles } from '../platform/import';
-import { WRONG_LETTER_SECONDS } from '../platform/settings';
+import { PAIR_SECONDS } from '../platform/settings';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
 import { confirmDialog, toast } from './dialog';
@@ -250,28 +250,28 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
 
 /** Device settings (not in the share link). Saved as soon as a value is chosen. */
 function settingsSection(app: App): HTMLElement {
-  const name = 'wrong-letter-seconds';
+  const name = 'pair-seconds';
   const legendId = `${name}-legend`;
   const options = h('div', { class: 'seg', role: 'radiogroup', 'aria-labelledby': legendId });
-  for (const seconds of WRONG_LETTER_SECONDS) {
+  for (const seconds of PAIR_SECONDS) {
     const input = h('input', {
       type: 'radio',
       name,
       value: String(seconds),
       id: `${name}-${seconds}`,
-      checked: app.settings.wrongLetterSeconds === seconds,
+      checked: app.settings.pairSeconds === seconds,
       disabled: app.readOnly,
       'aria-label': `${seconds} שניות`,
     });
     input.addEventListener('change', () => {
       if (!input.checked) return;
-      if (app.setSettings({ ...app.settings, wrongLetterSeconds: seconds })) {
+      if (app.setSettings({ ...app.settings, pairSeconds: seconds })) {
         toast('נשמר');
       } else {
         // Not saved: show the value the game will really use.
         options
           .querySelectorAll<HTMLInputElement>('input')
-          .forEach((i) => (i.checked = Number(i.value) === app.settings.wrongLetterSeconds));
+          .forEach((i) => (i.checked = Number(i.value) === app.settings.pairSeconds));
       }
     });
     options.appendChild(
@@ -282,7 +282,8 @@ function settingsSection(app: App): HTMLElement {
     'section',
     { class: 'panel', 'data-section': 'settings' },
     h('h2', { class: 'panel-title' }, 'הגדרות'),
-    h('p', { class: 'setting-label', id: legendId }, 'כמה זמן האות השגויה נשארת במקום (שניות)'),
+    h('p', { class: 'setting-label', id: legendId }, 'אותיות מבלבלות: כמה זמן מוצג זוג האותיות אחרי המילה (שניות)'),
+    h('p', { class: 'muted' }, 'רק כשהילד ניסה אות מבלבלת. בשאר המקרים "כל הכבוד" מוצג כרגיל.'),
     options,
     h('p', { class: 'muted' }, 'ההגדרה נשמרת במכשיר הזה בלבד ולא נשלחת בקישור.'),
   );

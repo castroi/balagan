@@ -32,7 +32,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Practice only — nothing is sent anywhere | No accounts, no tracking |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
-| Device settings (e.g. how long a wrong letter stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
+| Device settings (e.g. how long the popup with a letter pair stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
 
 ## Design rules (every activity)
 
@@ -103,11 +103,11 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | One tile = letter + all its marks (niqqud, dagesh, shin/sin dot, geresh) | Niqqud belongs to its letter |
 | Tiles never in the correct order, and never the reversed word when another order exists | Reversed is an easy giveaway in RTL |
 | Tap places the tile in the next slot; dropping a dragged tile anywhere outside the tray does the same; dropping it back on the tray cancels | One way of placing is clearer for young kids; dropping back lets the kid change their mind |
-| Each letter is checked immediately; correct locks, wrong returns to the tray after the time set on the edit screen (הגדרות: 0.5 / 1 / 1.5 / 2 / 3 seconds, default 1.5; also with reduce motion) | The owner's choice: instant feedback; 0.55 s was too fast to see which letter was wrong |
+| Each letter is checked immediately; correct locks, wrong returns to the tray after 0.55 s (0.3 s with reduce motion); taps during that moment are ignored | The owner's choice: instant feedback |
 | Identical-looking letters are interchangeable | Fair to the kid |
 | Points per word: 0 mistakes = 10, 1–2 = 7, 3+ = 5 | Reward accuracy without punishing; chosen over hints |
 | No hint, no skip button, no timer, no extra letters (extra letters are the Confusing Letters activity) | Kept simple; a kid can't get stuck with per-letter feedback |
-| After a correct word: say it again, then the next word (tap skips the wait); skipping or leaving cancels the repeat | Reinforces the spelling; an old word must never play over the next one |
+| After a correct word: say it again, then the next word after 1.6 s (or when the repeat ends; tap skips the wait); skipping or leaving cancels the repeat. The הגדרות time never applies here | Reinforces the spelling; an old word must never play over the next one |
 | Answer slots in one row (shrink to fit); letter tray wraps at 5 per row | Slots aren't tapped; tray tiles must stay big |
 
 ## Confusing Letters (אותיות מבלבלות) — decisions
@@ -124,6 +124,7 @@ Same game and rules as Scrambled Words (shared engine), except:
 | Preview "מה הילד יראה" with the count (e.g. 7/15) under valid content | The parent sees the tray before saving |
 | Wrong tile: the same orange shake + "כמעט! נסו שוב"; then that letter is dimmed (diagonal line, readable text, `aria-disabled`) only for the current slot — every identical-looking tile dims together, and a dimmed tap isn't a mistake | No new symbols or spoken messages to learn; dimming stops repeated guessing without giving the answer away for later slots |
 | After the word: if a confusing letter was tried, a card shows the right letter (✓) next to the confusing one crossed out, no text; each confusing letter once, at most 3 pairs | Shows the contrast that's the point of the activity, for kids who can't read yet; 3 pairs fit in one row |
+| A popup with a letter pair stays the time set in הגדרות (1.5 / 3 / 5 / 8 s, default 3; also with reduce motion; a tap still skips); without a pair it's the normal 1.6 s | The kid needs time to look at the pair; nothing else gets slower |
 | The right letter is the word letter that sounds alike (groups א/ע/ה, ס/שׂ/צ, כ/ק/ח, ת/ט, ב/ו in `round.ts`), otherwise the letter that was needed | צ tried in כַּעַס must be shown next to ס, not next to כַּ |
 | Points 10 / 7 / 5 as in Scrambled Words | One scoring system |
 | Tiles at most 54px and a 104px speaker button in this game only (Scrambled Words: tiles up to 64px, 132px speaker) | 15 tiles and the contrast card must fit on a 360×640 screen without scrolling |
