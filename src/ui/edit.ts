@@ -252,7 +252,8 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
 function settingsSection(app: App): HTMLElement {
   const name = 'pair-seconds';
   const legendId = `${name}-legend`;
-  const options = h('div', { class: 'seg', role: 'radiogroup', 'aria-labelledby': legendId });
+  const hintId = `${name}-hint`;
+  const options = h('div', { class: 'seg', role: 'radiogroup', 'aria-labelledby': legendId, 'aria-describedby': hintId });
   for (const seconds of PAIR_SECONDS) {
     const input = h('input', {
       type: 'radio',
@@ -283,7 +284,7 @@ function settingsSection(app: App): HTMLElement {
     { class: 'panel', 'data-section': 'settings' },
     h('h2', { class: 'panel-title' }, 'הגדרות'),
     h('p', { class: 'setting-label', id: legendId }, 'אותיות מבלבלות: כמה זמן מוצג זוג האותיות אחרי המילה (שניות)'),
-    h('p', { class: 'muted' }, 'רק כשהילד ניסה אות מבלבלת. בשאר המקרים "כל הכבוד" מוצג כרגיל.'),
+    h('p', { class: 'muted', id: hintId }, 'רק כשהילד ניסה אות מבלבלת. בשאר המקרים "כל הכבוד" מוצג כרגיל.'),
     options,
     h('p', { class: 'muted' }, 'ההגדרה נשמרת במכשיר הזה בלבד ולא נשלחת בקישור.'),
   );

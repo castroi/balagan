@@ -65,3 +65,11 @@ describe('device settings: how long the popup with a letter pair stays', () => {
     expect(JSON.parse(store.map[SETTINGS_KEY])).toEqual({ pairSeconds: 5 });
   });
 });
+
+describe('unreadable saved settings', () => {
+  it('are replaced on save', () => {
+    const store = memoryStore({ [SETTINGS_KEY]: '{broken' });
+    expect(saveSettings(store, { pairSeconds: 1.5 })).toBe(true);
+    expect(JSON.parse(store.map[SETTINGS_KEY])).toEqual({ pairSeconds: 1.5 });
+  });
+});

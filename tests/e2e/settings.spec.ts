@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { decodeShare } from '../../src/platform/share-codec';
 import { normalizeText as n } from '../../src/core/unicode';
 import { TEN_WORDS } from '../fixtures/words';
-import { currentTiles, recordSpeech, saveWords, startGame, tapTile } from './helpers';
+import { currentTiles, recordSpeech, saveWords, spoken, startGame, tapTile } from './helpers';
 
 /**
  * The popup after a word ("+N כל הכבוד!") stays 1.6 s, or the time set in
@@ -127,9 +127,65 @@ test.describe('popup with a letter pair (Confusing Letters)', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await saveConfusing(page, 'סַבָּא צ');
     await startConfusing(page);
+    // The wrong letter shows only 0.3 s with reduce motion: do it all on the stopped clock.
+    await stopClock(page);
+    await clickNow(page, 'צ');
+    await page.clock.runFor(400);
+    await expect(page.locator('.slot.wrong')).toHaveCount(0);
+    for (const t of SABA) await clickNow(page, t);
+    await expectPopupFor(page, 3000);
+  });
+
+  test('never closes before the word has been said again', async ({ page }) => {
+    // A slow voice: the repeated word takes 3 seconds to say.
+    await page.addInitScript(() => {
+      const synth = window.speechSynthesis as unknown as { speak(u: { onend?: () => void }): void };
+      const record = synth.speak.bind(synth);
+      synth.speak = (u) => {
+        const onend = u.onend;
+        u.onend = undefined;
+        record(u);
+        setTimeout(() => onend?.(), 3000);
+      };
+    });
+    await saveConfusing(page, 'סַבָּא צ');
+    await chooseSeconds(page, '1.5');
+    await startConfusing(page);
     await tryConfusingLetter(page);
     await finishOnStoppedClock(page, SABA);
-    await expectPopupFor(page, 3000);
+    // Popup at 250 ms, repeat starts at 750 ms and ends at 3750 ms — well after the 1.5 s.
+    await page.clock.runFor(POPUP_DELAY_MS + 50);
+    await expect(page.locator('.celebration .contrast-pair')).toHaveCount(1);
+    await page.clock.runFor(2700); // 3000 ms after the last letter
+    await expect(page.locator('.celebration')).toBeAttached();
+    await page.clock.runFor(900); // 3900 ms
+    await expect(page.locator('.celebration')).toHaveCount(0);
+  });
+
+  test('leaving during a long popup stops everything', async ({ page }) => {
+    await saveConfusing(page, 'סַבָּא צ\nכַּעַס ק');
+    await chooseSeconds(page, '8');
+    await startConfusing(page);
+    // Whichever word comes first, try its confusing letter, then solve it.
+    const first = await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('hebrew-practice')!);
+      const p = s.progress['confusing-letters'];
+      return s.assignments['confusing-letters'].data.items[p.order[p.index]] as { word: string; extras: string[] };
+    });
+    const tiles = first.word === n('סַבָּא') ? SABA : [n('כַּ'), n('עַ'), 'ס'];
+    await tapTile(page, first.extras[0]);
+    await expect(page.locator('.slot.wrong')).toHaveCount(1);
+    await expect(page.locator('.slot.wrong')).toHaveCount(0);
+    await finishOnStoppedClock(page, tiles);
+    await page.clock.runFor(POPUP_DELAY_MS + 50);
+    await expect(page.locator('.celebration .contrast-pair')).toHaveCount(1);
+
+    await page.evaluate(() => document.querySelector<HTMLElement>('[aria-label="חזרה לבית"]')!.click());
+    const spokenBefore = (await spoken(page)).length;
+    await page.clock.runFor(10_000);
+    expect((await spoken(page)).length).toBe(spokenBefore);
+    await expect(page.locator('.screen.home')).toBeVisible();
+    await expect(page.locator('.screen.game')).toHaveCount(0);
   });
 });
 
@@ -217,6 +273,20 @@ test.describe('a wrong letter is back to how it was before 1.2.0', () => {
     }, n('סַ'));
     await expect(page.locator('.slot.locked')).toHaveCount(0);
     await page.clock.runFor(600);
+    await expect(page.locator('.slot.wrong')).toHaveCount(0);
+    // The tap was dropped, not saved for later.
+    await expect(page.locator('.slot.locked')).toHaveCount(0);
+  });
+
+  test('with "reduce motion" the wrong letter shows 0.3 seconds, as before', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await saveConfusing(page, 'סַבָּא צ');
+    await startConfusing(page);
+    await stopClock(page);
+    await clickNow(page, 'צ');
+    await page.clock.runFor(200);
+    await expect(page.locator('.slot.wrong')).toHaveCount(1);
+    await page.clock.runFor(200);
     await expect(page.locator('.slot.wrong')).toHaveCount(0);
   });
 

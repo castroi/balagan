@@ -78,6 +78,8 @@ export function mountLetterGame(
     return createRound(item.word, item.extras, defaultRng);
   };
   let round: WordRound = roundFor(progress);
+  /** The popup after this word shows a letter pair (Confusing Letters, after a confusing letter was tried). */
+  const showsPair = () => Boolean(options.showConfusions) && round.confusions.length > 0;
   let phase: Phase = 'intro';
   const resuming = progress.index > 0;
 
@@ -145,8 +147,7 @@ export function mountLetterGame(
     });
     const skipped = new Promise<void>((resolve) => (skipCelebration = resolve));
     // A letter pair (Confusing Letters) stays the time set on the edit screen; every other popup 1.6 s.
-    const showsPair = Boolean(options.showConfusions) && round.confusions.length > 0;
-    await Promise.race([skipped, Promise.all([delay(showsPair ? ctx.pairMs : CELEBRATION_MS), repeated])]);
+    await Promise.race([skipped, Promise.all([delay(showsPair() ? ctx.pairMs : CELEBRATION_MS), repeated])]);
     cancelRepeat();
     skipCelebration = null;
     if (destroyed) return;
@@ -383,7 +384,7 @@ export function mountLetterGame(
   function celebration() {
     // The contrast card is inside a button, so screen readers hear it here instead.
     const pairs =
-      options.showConfusions && round.confusions.length
+      showsPair()
         ? ` ${round.confusions.map((c) => `${c.right} ולא ${c.wrong}`).join(', ')}`
         : '';
     announce(`כל הכבוד! ${lastPoints} נקודות.${pairs}`);
@@ -400,7 +401,7 @@ export function mountLetterGame(
       icon(ICONS.star, 'icon burst b3'),
       h('span', { class: 'celebrate-points', dir: 'ltr' }, `+${lastPoints}`),
       h('span', { class: 'celebrate-text' }, 'כל הכבוד!'),
-      options.showConfusions && round.confusions.length ? contrastCard() : null,
+      showsPair() ? contrastCard() : null,
     );
   }
 
