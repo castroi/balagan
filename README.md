@@ -12,16 +12,19 @@ Requires Node.js 20 or newer.
 npm install
 npm run dev        # opens a local site with live reload
 npm test           # unit tests
+npm run test:e2e   # browser smoke tests (first time: npx playwright install chromium webkit)
 npm run build      # type-check + tests + production build into dist/
 ```
 
 After the first `npm install`, commit the generated `package-lock.json`.
 
+**Project rules, decisions and the Git workflow (a branch and pull request for every change) are in [`CLAUDE.md`](CLAUDE.md).** Read it before adding a new activity.
+
 ## Deploy on Vercel
 
 1. Push this folder to a GitHub repository.
 2. In Vercel: **Add New → Project**, import the repository. Vercel detects Vite; keep the defaults.
-3. Every push to `main` deploys. The `build` script runs the type-check and the tests first, so a failing test stops the deploy.
+3. Every merge to `main` deploys to the live site; every branch gets a preview link. The `build` script runs the type-check and the tests first, so a failing test stops the deploy.
 
 GitHub Actions (`.github/workflows/ci.yml`) also runs the checks on every push and pull request.
 
@@ -40,6 +43,7 @@ src/
     scrambled-words/       parse + validation, game logic, game screen
   ui/          home screen, edit screen, dialogs
 tests/unit/    unit tests (Vitest)
+tests/e2e/     browser smoke tests on phone-sized screens (Playwright)
 public/        icons, web app manifest, offline service worker
 ```
 
