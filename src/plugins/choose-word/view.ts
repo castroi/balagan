@@ -233,7 +233,7 @@ export function mountChooseGame(
       'div',
       { class: 'stage center end' },
       icon(ICONS.star, 'icon end-star'),
-      h('h1', { class: 'title' }, 'כל הכבוד!'),
+      h('h1', { class: 'title', tabindex: -1 }, 'כל הכבוד!'),
       h('p', { class: 'muted big' }, items.length === 1 ? 'השלמת את המילה' : `השלמת את כל ${items.length} המילים`),
       h(
         'div',
@@ -301,10 +301,9 @@ export function mountChooseGame(
 
   function render(hl: Highlight = {}) {
     if (destroyed) return;
-    // Re-rendering replaces the options; keep keyboard focus on the same one.
-    const focused = root.contains(document.activeElement)
-      ? (document.activeElement as HTMLElement).dataset.option
-      : undefined;
+    // Re-rendering replaces the buttons; keep keyboard focus in the game (same option when it's still there).
+    const hadFocus = root.contains(document.activeElement);
+    const focused = hadFocus ? (document.activeElement as HTMLElement).dataset.option : undefined;
     root.replaceChildren(topBar());
     if (phase === 'intro') {
       root.appendChild(introView());
@@ -312,6 +311,8 @@ export function mountChooseGame(
     }
     if (phase === 'end') {
       root.appendChild(endView());
+      // A new screen inside the game: focus its title.
+      root.querySelector<HTMLElement>('.end .title')?.focus({ preventScroll: true });
       return;
     }
     root.appendChild(
@@ -322,10 +323,17 @@ export function mountChooseGame(
         h('p', { class: 'message' }, phase === 'play' ? message : ''),
       ),
     );
+    // Long words take one column; together with the contrast card they don't fit a small phone,
+    // so the card (which already shows the right word and the tried ones) replaces the options.
+    if (phase === 'celebrate' && round.tried.length > 0 && columnsFor(round.options) === 1) {
+      if (hadFocus) root.querySelector<HTMLElement>('.celebration')?.focus();
+      return;
+    }
     const grid = choicesEl(hl);
     root.appendChild(grid);
-    if (focused !== undefined) {
-      (grid.querySelector<HTMLElement>(`.choice[data-option="${focused}"]`) ?? grid.querySelector<HTMLElement>('.choice'))?.focus();
+    if (hadFocus) {
+      const same = focused === undefined ? null : grid.querySelector<HTMLElement>(`.choice[data-option="${focused}"]`);
+      (same ?? grid.querySelector<HTMLElement>('.choice'))?.focus();
     }
   }
 

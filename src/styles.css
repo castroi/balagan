@@ -1207,7 +1207,7 @@ body:has(.screen.edit) {
   --slot: 60px;
   position: relative;
   min-height: 76px;
-  padding: 0 6px;
+  padding: 0 4px;
   border-radius: 16px;
   border: 3px solid var(--ink);
   background: var(--tile);
@@ -1217,7 +1217,8 @@ body:has(.screen.edit) {
   justify-content: center;
   font-family: var(--tile-font);
   font-weight: 700;
-  font-size: 30px;
+  /* 7 wide letters (מ, ש, ם) still fit half of a 360px phone */
+  font-size: 28px;
   line-height: 1.1;
   color: var(--ink);
   white-space: nowrap;

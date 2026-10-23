@@ -79,7 +79,7 @@ test.describe('editor', () => {
   });
 
   test('the settings time covers this activity too', async ({ page }) => {
-    await expect(page.locator('[data-section="settings"]')).toContainText('באותיות מבלבלות ובבחרו את המילה');
+    await expect(page.locator('[data-section="settings"]')).toContainText('וב"בחרו את המילה"');
   });
 });
 
@@ -110,7 +110,6 @@ test('a wrong word: orange shake, then dimmed; after the right word, the contras
   // Tapping the dimmed word again isn't another mistake (2 mistakes still give 7 points; 3 would give 5).
   // dispatchEvent: Playwright won't click an aria-disabled element, but a kid's finger can.
   await dimmed.dispatchEvent('click');
-  await page.waitForTimeout(100);
   await expect(page.locator('.choice.wrong')).toHaveCount(0);
   await tap(page, n('כַּאַס'));
   await expect(page.locator('.choice.dimmed')).toHaveCount(2);
@@ -135,6 +134,21 @@ test('no contrast card when the first tap is right', async ({ page }) => {
   await expect(page.locator('.celebrate-points')).toHaveText('+10');
   await expect(page.locator('.celebration')).toContainText('כל הכבוד!');
   await expect(page.locator('.word-contrast')).toHaveCount(0);
+});
+
+test('leaving during the celebration: the old word is not said again', async ({ page }) => {
+  await recordSpeech(page);
+  await saveChooseWord(page, 'כעס קעס\nצער סער');
+  await start(page);
+  await expect.poll(async () => (await spoken(page)).length).toBe(1);
+  const [word] = await spoken(page);
+  await tap(page, word);
+  await expect(page.locator('.celebration')).toBeVisible();
+  await page.getByRole('button', { name: 'חזרה לבית' }).click();
+  await expect(card(page)).toBeVisible();
+  // The repeat would come 0.5 s after the word was found.
+  await page.waitForTimeout(1000);
+  expect(await spoken(page)).toEqual([word]);
 });
 
 test('progress survives closing the app, without extra points', async ({ page }) => {
@@ -197,6 +211,29 @@ test.describe('small phone (360×640)', () => {
     await tap(page, n('כַּעַס'));
     await expect(page.locator('.word-contrast .word-tile.crossed')).toHaveCount(3);
     await expect(page.locator('.celebrate-points')).toHaveText('+5');
+    expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(false);
+  });
+
+  test('7-letter words stay in two columns without being cut off', async ({ page }) => {
+    await saveChooseWord(page, 'מִתְעַצְבֶּנֶת מִתְאַצְבֶּנֶת מִתְעַסְבֶּנֶת מִטְעַצְבֶּנֶת');
+    await start(page);
+    await expect(page.locator('.choices.one')).toHaveCount(0);
+    expect(new Set((await boxes(page)).map((x) => x.left)).size).toBe(2);
+    const clipped = await choices(page).evaluateAll((els) => els.some((e) => e.scrollWidth > e.clientWidth));
+    expect(clipped).toBe(false);
+  });
+
+  test('long words after 3 wrong taps: the contrast card replaces the options, no scrolling', async ({ page }) => {
+    const words = ['הַמִּתְעַצְבְּנִים', 'הַמִּתְאַצְבְּנִים', 'הַמִּתְעַסְבְּנִים', 'הַמִּטְעַצְבְּנִים'].map(n);
+    await saveChooseWord(page, words.join(' '));
+    await start(page);
+    for (const w of words.slice(1)) {
+      await tap(page, w);
+      await expect(page.locator('.choice.wrong')).toHaveCount(0);
+    }
+    await tap(page, words[0]);
+    await expect(page.locator('.word-contrast .word-tile.crossed')).toHaveCount(3);
+    await expect(page.locator('.choices')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(false);
   });
 });

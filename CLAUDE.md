@@ -146,9 +146,9 @@ A different kind of game (not letter tiles): its own pure logic (`round.ts`) and
 | 2 columns (an odd last option centred, same width); 1 full-width column when any option has more than 7 letters (`TWO_COLUMN_MAX_LETTERS`) | Big buttons; long words with niqqud stay readable instead of shrinking |
 | Wrong word: orange shake + "כמעט! נסו שוב", then dimmed (diagonal line, `aria-disabled`, "נוסתה" in its label); a dimmed tap isn't a mistake | Same signals as Confusing Letters |
 | Option labels "אפשרות N: <word>" | Text-to-speech reads look-alike spellings the same; the number tells them apart |
-| After the word: if a wrong word was tried, the correct word (✓) above the tried ones crossed out, no text, for the הגדרות time; otherwise "כל הכבוד!" for 1.6 s | Shows the contrast, like the letter pair |
+| After the word: if a wrong word was tried, the correct word (✓) above the tried ones crossed out, no text, for the הגדרות time; otherwise "כל הכבוד!" for 1.6 s. With long words (one column) the card replaces the options while it shows | Shows the contrast, like the letter pair; long words and the card don't both fit 360×640 |
 | Points 10 / 7 / 5 as in the other games (3+ mistakes only possible with 4 options) | One scoring system |
-| 104px speaker button (compact, as Confusing Letters); 4 one-column options + the contrast card fit 360×640 | No scrolling on a small phone |
+| 104px speaker button (compact, as Confusing Letters); option text 28px in two columns (7 wide letters fit), 32px in one | No scrolling or cut-off words on a small phone |
 | Saved progress is keyed by the full lines (word + wrong words) | Changing a line starts a fresh round |
 | Home card tiles כַּעַס / קַעַס | Shows what the activity is about |
 

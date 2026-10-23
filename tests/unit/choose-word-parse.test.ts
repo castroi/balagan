@@ -107,6 +107,12 @@ describe('choose word editor', () => {
     expect(parseChooseWord('עצוב אצוב עסוב').warnings).toEqual([]);
   });
 
+  it('counts a shin dot or a dagesh alone as niqqud', () => {
+    const mixed = 'שורה 1: רק לחלק מהמילים יש ניקוד — כך קל לזהות את התשובה';
+    expect(parseChooseWord('\u05E9\u05C1\u05DE\u05E9 סמש צמש').warnings).toEqual([mixed]);
+    expect(parseChooseWord('\u05D1\u05BC\u05D9\u05EA בית וית').warnings).toEqual([mixed]);
+  });
+
   it('explains characters that are not Hebrew letters, in the correct or a wrong word', () => {
     expect(parseChooseWord('כעס x').errors).toEqual(['שורה 1: התו "x" אינו אות עברית']);
     expect(parseChooseWord('כעסa קעס').errors).toEqual(['שורה 1: התו "a" אינו אות עברית']);
@@ -153,7 +159,7 @@ describe('choose word editor', () => {
     expect(parseChooseWord('   \n ').errors).toEqual(['לא הוזנו מילים']);
     const line = 'כעס קעס';
     expect(parseChooseWord(Array(MAX_WORDS).fill(line).join('\n')).errors).toEqual([]);
-    expect(parseChooseWord(Array(MAX_WORDS + 1).fill(line).join('\n')).errors).toEqual(['אפשר עד 20 מילים (הוזנו 21)']);
+    expect(parseChooseWord(Array(MAX_WORDS + 1).fill(line).join('\n')).errors).toEqual(['אפשר עד 20 שורות (הוזנו 21)']);
   });
 
   it('warns about a correct word that appears twice', () => {

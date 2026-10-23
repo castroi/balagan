@@ -21,9 +21,9 @@ export interface ChooseWordData {
 
 // Same separators as Confusing Letters: spaces, commas, periods, |, ;, /, -,
 // the Hebrew maqaf and the Arabic comma.
-const SEPARATORS = /[\s,.|;/\-־،]+/;
-// Niqqud, dagesh and shin/sin dots — anything that marks a word as "with niqqud".
-const MARKS = /[ְ-ׇֽֿׁׂׅׄ]/;
+const SEPARATORS = /[\s,.|;/\-\u05BE\u060C]+/;
+// Niqqud, dagesh, meteg, rafe and shin/sin dots (the same marks as a tile's) — any of them marks a word as "with niqqud".
+const MARKS = /[\u05B0-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7]/;
 
 const hasMarks = (word: string) => MARKS.test(word);
 
@@ -101,7 +101,7 @@ function checkList(
   });
 
   if (entries.length === 0) errors.push('לא הוזנו מילים');
-  if (entries.length > MAX_WORDS) errors.push(`אפשר עד ${MAX_WORDS} מילים (הוזנו ${entries.length})`);
+  if (entries.length > MAX_WORDS) errors.push(`אפשר עד ${MAX_WORDS} שורות (הוזנו ${entries.length})`);
   const words = items.map((it) => it.word);
   const dupes = [...new Set(words.filter((w, i) => words.indexOf(w) !== i))];
   if (dupes.length) warnings.push(`מילים שמופיעות פעמיים: ${dupes.join(', ')}`);
