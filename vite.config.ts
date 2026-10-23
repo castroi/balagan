@@ -60,5 +60,14 @@ export default defineConfig({
   plugins: [serviceWorker()],
   test: {
     include: ['tests/**/*.test.ts'],
+    // `npm run test:coverage`: report for all app code; the pure logic of Choose Word must stay covered.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      reporter: ['text', 'html'],
+      thresholds: {
+        'src/plugins/choose-word/{parse,round}.ts': { lines: 95, functions: 95, branches: 95, statements: 95 },
+      },
+    },
   },
 });
