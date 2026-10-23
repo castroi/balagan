@@ -71,6 +71,11 @@ describe('service worker build', () => {
     expect(edit('index.html', '<html lang="he"></html>')).not.toBe(base);
   });
 
+  it('changes the version when only the worker’s own code changes', () => {
+    const a = version(buildServiceWorker(TEMPLATE, FILES, OPTIONS));
+    expect(version(buildServiceWorker(`${TEMPLATE}\n// changed`, FILES, OPTIONS))).not.toBe(a);
+  });
+
   it('changes the version for a new app version', () => {
     const a = version(buildServiceWorker(TEMPLATE, FILES, OPTIONS));
     expect(version(buildServiceWorker(TEMPLATE, FILES, { ...OPTIONS, appVersion: '1.0.1' }))).not.toBe(a);

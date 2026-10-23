@@ -14,7 +14,8 @@ const TIMEOUT_MS = 30;
 
 const template = readFileSync(new URL('../../build/service-worker.template.js', import.meta.url), 'utf8')
   // Short network timeout so tests run fast.
-  .replace('const NETWORK_TIMEOUT_MS = 3000;', `const NETWORK_TIMEOUT_MS = ${TIMEOUT_MS};`);
+  .replace('const NETWORK_TIMEOUT_MS = 3000;', `const NETWORK_TIMEOUT_MS = ${TIMEOUT_MS};`)
+  .replace('const FONT_TIMEOUT_MS = 5000;', `const FONT_TIMEOUT_MS = ${TIMEOUT_MS};`);
 
 type Handler = () => Response | Promise<Response>;
 const html = (body: string) => new Response(body, { headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -137,15 +138,25 @@ describe('service worker at runtime', () => {
     expect(sw.appCache().entries.size).toBe(3);
   });
 
-  it('activate deletes caches of older builds but keeps fonts and other sites’ caches', async () => {
+  it('install is not held up by fonts that never finish downloading', async () => {
+    const sw = setup();
+    sw.routes.set(FONT_CSS, () => new Promise<Response>(() => undefined)); // hangs forever
+    await sw.lifecycle('install');
+    expect(sw.appCache().entries.size).toBe(3);
+    expect(sw.state().skipped).toBe(true);
+  });
+
+  it('activate deletes caches of older builds (incl. version 1.0.0) but keeps fonts and other sites’ caches', async () => {
     const sw = setup();
     const open = (name: string) => sw.stores.set(name, new FakeCache(async () => new Response('')));
     open('balagan-oldversion');
+    open('hebrew-practice-v1');
     open('other-app-cache');
     await sw.lifecycle('install');
     await sw.lifecycle('activate');
     const names = [...sw.stores.keys()];
     expect(names).not.toContain('balagan-oldversion');
+    expect(names).not.toContain('hebrew-practice-v1');
     expect(names).toContain('other-app-cache');
     expect(names.filter((n) => n.startsWith('balagan-'))).toHaveLength(2); // this build + fonts
     expect(sw.state().claimed).toBe(true);

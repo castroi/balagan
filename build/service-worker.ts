@@ -57,7 +57,8 @@ export function buildServiceWorker(
     .sort((a, b) => a.path.localeCompare(b.path))
     .map((f) => `${f.path}:${hash(f.content)}`)
     .join('\n');
-  const version = hash(`${options.appVersion}\n${fingerprint}`);
+  // The worker's own code counts too, so a change to its logic also starts a fresh cache.
+  const version = hash(`${options.appVersion}\n${hash(template)}\n${fingerprint}`);
 
   return template
     .replace('__PRECACHE_LIST__', JSON.stringify(precache))

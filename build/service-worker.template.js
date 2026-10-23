@@ -17,13 +17,15 @@ const CACHE = `balagan-${VERSION}`;
 const FONT_CACHE = `balagan-fonts-${'__FONT_VERSION__'}`;
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const NETWORK_TIMEOUT_MS = 3000;
+const FONT_TIMEOUT_MS = 5000;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     Promise.all([
       caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)),
-      // Fonts are a bonus: failing to get them must not block offline support.
-      cacheFonts().catch(() => undefined),
+      // Fonts are a bonus: failing or slow downloads must not block offline support.
+      Promise.race([cacheFonts(), wait(FONT_TIMEOUT_MS)]).catch(() => undefined),
     ]).then(() => self.skipWaiting()),
   );
 });
@@ -34,7 +36,10 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k.startsWith('balagan-') && k !== CACHE && k !== FONT_CACHE).map((k) => caches.delete(k)),
+          keys
+            // "hebrew-practice-" is the cache of the first version (1.0.0).
+            .filter((k) => (k.startsWith('balagan-') || k.startsWith('hebrew-practice-')) && k !== CACHE && k !== FONT_CACHE)
+            .map((k) => caches.delete(k)),
         ),
       )
       .then(() => self.clients.claim()),
@@ -104,7 +109,7 @@ async function networkFirstPage(event) {
   event.waitUntil(update.catch(() => undefined));
   if (!cached) return update;
 
-  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), NETWORK_TIMEOUT_MS));
+  const timeout = wait(NETWORK_TIMEOUT_MS).then(() => null);
   try {
     const response = await Promise.race([update, timeout]);
     return response && response.ok ? response : cached;
