@@ -6,7 +6,7 @@ First assignment type: **Scrambled Words** (מילים מבולגנות). The wo
 
 ## Run it on your computer
 
-Requires Node.js 20 or newer.
+Requires Node.js 22 or newer.
 
 ```bash
 npm install
@@ -44,7 +44,8 @@ src/
   ui/          home screen, edit screen, dialogs
 tests/unit/    unit tests (Vitest)
 tests/e2e/     browser smoke tests on phone-sized screens (Playwright)
-public/        icons, web app manifest, offline service worker
+public/        icons, web app manifest
+build/         offline service worker template + generator (dist/sw.js is built)
 ```
 
 ### Adding a new assignment type
