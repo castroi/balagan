@@ -5,7 +5,7 @@ test('the app opens and works offline after a single online visit', async ({ pag
   await expect(page.locator('.title')).toHaveText('שלום!');
 
   // The service worker caches every file of the build on install, then takes control.
-  await page.waitForFunction(() => navigator.serviceWorker?.controller !== null, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => !!navigator.serviceWorker?.controller, undefined, { timeout: 15_000 });
   const precached = await page.evaluate(async () => {
     const names = await caches.keys();
     const cache = await caches.open(names.find((n) => n.startsWith('balagan-') && !n.includes('fonts'))!);

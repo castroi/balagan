@@ -2,8 +2,12 @@
 declare const __APP_VERSION__: string;
 
 /** Set by Vite: PROD is true in `vite build`, false in `vite dev`. */
+interface ImportMetaEnv {
+  readonly PROD: boolean;
+  readonly DEV: boolean;
+}
 interface ImportMeta {
-  readonly env: { readonly PROD: boolean; readonly DEV: boolean };
+  readonly env: ImportMetaEnv;
 }
 
 /** CSS files are bundled by Vite. */

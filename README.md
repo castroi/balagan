@@ -66,4 +66,4 @@ Automated tests can't cover these:
 - [ ] Share link opened from WhatsApp loads the words.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
-- [ ] Airplane mode after one online visit: the app still opens.
+- [ ] Airplane mode after one online visit: the app still opens, with the Hebrew fonts. On iPhone, that visit must be made from the installed home-screen app (it has its own storage).

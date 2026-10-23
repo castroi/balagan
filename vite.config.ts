@@ -1,32 +1,53 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { buildServiceWorker } from './build/service-worker';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
+import { buildServiceWorker, findFontStylesheet, type BuildFile } from './build/service-worker';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
 };
 
-/** All files under a folder, as paths relative to it. */
-function listFiles(dir: string): string[] {
+/** All files under a folder, with paths relative to it. */
+function readFiles(dir: string): BuildFile[] {
+  if (!existsSync(dir)) return [];
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())
-    .map((entry) => relative(dir, join(entry.parentPath, entry.name)));
+    .map((entry) => {
+      const full = join(entry.parentPath, entry.name);
+      return { path: relative(dir, full), content: readFileSync(full) };
+    });
 }
 
-/** Writes dist/sw.js with the list of this build's files, so the app works offline. */
+/** Writes dist/sw.js listing this build's files, so the app works offline. */
 function serviceWorker(): Plugin {
+  let root = process.cwd();
+  let publicDir = '';
   return {
     name: 'balagan-service-worker',
     apply: 'build',
+    // Run after Vite has added index.html and every asset to the bundle.
+    enforce: 'post',
+    configResolved(config) {
+      root = config.root;
+      publicDir = config.publicDir;
+    },
     generateBundle(_options, bundle) {
-      const template = readFileSync('build/service-worker.template.js', 'utf8');
-      const files = [...Object.keys(bundle), ...listFiles('public')];
+      const built: BuildFile[] = Object.values(bundle).map((item) => ({
+        path: item.fileName,
+        content: item.type === 'chunk' ? item.code : item.source,
+      }));
+      const index = built.find((f) => f.path === 'index.html');
+      const indexHtml =
+        typeof index?.content === 'string' ? index.content : readFileSync(resolve(root, 'index.html'), 'utf8');
+      const template = readFileSync(resolve(root, 'build/service-worker.template.js'), 'utf8');
       this.emitFile({
         type: 'asset',
         fileName: 'sw.js',
-        source: buildServiceWorker(template, files, pkg.version),
+        source: buildServiceWorker(template, [...built, ...(publicDir ? readFiles(publicDir) : [])], {
+          appVersion: pkg.version,
+          fontCss: findFontStylesheet(indexHtml),
+        }),
       });
     },
   };
