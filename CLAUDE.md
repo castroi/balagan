@@ -42,6 +42,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Touch targets at least 44px; letter tiles bigger | Kids' fingers are less precise (Apple's minimum is 44pt) |
 | Icons and voice before text | Younger kids may not read well yet |
 | Every game starts with a Start button | iPhone allows sound and speech only after a tap |
+| Every game uses the shared start screen (`startScreen` in `src/plugins/shared/start-screen.ts`): a round in progress shows "ממשיכים" and, under it, a smaller outlined "↻ מתחילים מהתחלה" (only when resuming, from word 2). Restart does what "לשחק שוב" does — new random order, round points 0, the total kept — with no confirmation and no undo, then focus goes to the speaker. No restart (or skip) button during play | Kids sometimes want a fresh start; having to leave and come back keeps it from becoming an escape from hard words; losing a round is small and shows at once |
 | Mistakes: orange + shake + soft sound, never red | A nudge, not a failure |
 | Correct: green + ✓ icon + short sound | Color is never the only signal (color-blind kids) |
 | No decoration that does nothing; no "coming soon" items | Distracts and frustrates kids |
@@ -75,8 +76,9 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
    - `parse.ts` — the editor's input format, validation and `deserialize`
    - `index.ts` — the plugin object
    - `preview.ts` — optional "מה הילד יראה" preview on the edit screen (`preview` in the plugin)
-4. A letter-tile game (hear a word, place its letters) reuses `src/plugins/shared/letter-game/`: `round.ts` (pure logic, no DOM), `progress.ts`, `view.ts` (`mountLetterGame` with options), `word.ts` (word rules). A different kind of game gets its own pure logic file + view.
-5. Give its home card and edit section a `data-plugin` attribute (done by the platform) and scope e2e selectors to it — several activities share the same buttons.
+4. Use the shared start screen (`src/plugins/shared/start-screen.ts`) for the screen before a round, with `onRestart` doing the same as "לשחק שוב" — so every game can continue or restart a round in the same way.
+5. A letter-tile game (hear a word, place its letters) reuses `src/plugins/shared/letter-game/`: `round.ts` (pure logic, no DOM), `progress.ts`, `view.ts` (`mountLetterGame` with options), `word.ts` (word rules). A different kind of game gets its own pure logic file + view.
+6. Give its home card and edit section a `data-plugin` attribute (done by the platform) and scope e2e selectors to it — several activities share the same buttons.
 
 | Rule | Why |
 |---|---|
@@ -89,7 +91,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Add points and save progress in one `ctx.commit(progress, points)` | Points are never counted twice after a reload |
 | Words/items order random per round; never show the answer directly | Real practice, not memorizing positions |
 
-**Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item. `npm run test:coverage` prints the coverage report (CI uploads it as `coverage-report`); Choose Word's `parse.ts` and `round.ts` must stay at 95% or more.
+**Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item. Add the new game to `GAMES` in `tests/e2e/restart.spec.ts` (continue/restart on the start screen). `npm run test:coverage` prints the coverage report (CI uploads it as `coverage-report`); Choose Word's `parse.ts` and `round.ts` must stay at 95% or more.
 
 **Release:** bump the version in `package.json` (new activity or feature = minor, e.g. 1.0.0 → 1.1.0; fixes = patch), then run the "Manual checks on real phones" list in `README.md`.
 

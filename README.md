@@ -47,6 +47,7 @@ src/
   platform/    storage, device settings, share links, text-to-speech, sounds, version
   plugins/     assignment types — one folder per type
     registry.ts            list of all types
+    shared/start-screen.ts the screen before a round, for every game: start, continue, or restart
     shared/letter-game/    letter-tile game shared by both types: round logic, progress, game screen
     scrambled-words/       parse + validation, plugin object (game-state.ts, view.ts, text.ts re-export the shared engine)
     confusing-letters/     parse + validation, editor preview, plugin object
@@ -79,4 +80,5 @@ Automated tests can't cover these:
 - [ ] Share link with a full week of all three activities (20 words each, 4 options per Choose Word line), sent and opened from WhatsApp, loads all three.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
+- [ ] In each game, mid-round: "מתחילים מהתחלה" on the start screen goes back to word 1 and keeps the total points; a quick tap on "ממשיכים" never hits it by mistake.
 - [ ] Airplane mode after one online visit: the app still opens, with the Hebrew fonts. On iPhone, that visit must be made from the installed home-screen app (it has its own storage).
