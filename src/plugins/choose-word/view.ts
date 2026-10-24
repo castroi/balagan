@@ -8,7 +8,7 @@ import { announce } from '../../ui/dialog';
 import { defaultRng } from '../../core/rng';
 import { pointsForMistakes } from '../../core/scoring';
 import type { GameContext } from '../types';
-import { wordCountLabel } from '../shared/letter-game/text';
+import { startScreen } from '../shared/start-screen';
 import { CELEBRATION_MS, MAX_DOTS } from '../shared/letter-game/view';
 import { completeWord, isValidProgress, newProgress, type RoundProgress } from '../shared/letter-game/progress';
 import { choose, columnsFor, createChoiceRound, type ChoiceRound } from './round';
@@ -50,7 +50,6 @@ export function mountChooseGame(
   };
   let round: ChoiceRound = roundFor(progress);
   let phase: Phase = 'intro';
-  const resuming = progress.index > 0;
 
   const root = h('div', { class: 'screen game compact choose' });
   container.appendChild(root);
@@ -59,10 +58,14 @@ export function mountChooseGame(
 
   const speakCurrent = () => void ctx.speaker.speak(round.word);
 
+  /** Keyboard and screen-reader users land on the speaker when a round starts. */
+  const focusSpeaker = () => root.querySelector<HTMLElement>('.speaker-btn')?.focus({ preventScroll: true });
+
   function start() {
     ctx.sounds.unlock();
     phase = 'play';
     render();
+    focusSpeaker();
     speakCurrent();
   }
 
@@ -128,6 +131,7 @@ export function mountChooseGame(
     render();
   }
 
+  /** A new round (new order, round points 0; the total is kept): "לשחק שוב" at the end, or restart on the start screen. */
   function playAgain() {
     ctx.sounds.unlock();
     progress = newProgress(keys, defaultRng);
@@ -136,7 +140,13 @@ export function mountChooseGame(
     phase = 'play';
     message = '';
     render();
+    focusSpeaker();
     speakCurrent();
+  }
+
+  function restart() {
+    announce('מתחילים מהתחלה');
+    playAgain();
   }
 
   // ---------- rendering ----------
@@ -211,21 +221,7 @@ export function mountChooseGame(
   }
 
   function introView() {
-    return h(
-      'div',
-      { class: 'stage center' },
-      h(
-        'button',
-        { class: 'start-btn', type: 'button', onclick: start },
-        icon(ICONS.play, 'icon start-icon'),
-        h('span', {}, resuming ? 'ממשיכים' : 'התחלה'),
-      ),
-      h(
-        'p',
-        { class: 'muted big' },
-        resuming ? `מילה ${progress.index + 1} מתוך ${items.length}` : wordCountLabel(items.length),
-      ),
-    );
+    return startScreen({ index: progress.index, total: items.length, onStart: start, onRestart: restart });
   }
 
   function endView() {

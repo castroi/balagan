@@ -1345,3 +1345,10 @@ body:has(.screen.edit) {
   width: 16px;
   height: 16px;
 }
+
+/* ---------- Start screen: restart a round in progress (every game) ---------- */
+/* Smaller and plainer than the round Start button, with a clear gap, so a quick tap still continues. */
+.restart-btn {
+  margin-top: 14px;
+  min-width: 220px;
+}
