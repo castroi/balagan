@@ -48,7 +48,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | No decoration that does nothing; no "coming soon" items | Distracts and frustrates kids |
 | Respect "reduce motion" (already global in `styles.css`) | Accessibility |
 | Confirmation dialogs start on the safe button; Escape cancels; the page behind is inert | A quick tap or Enter must not delete anything; focus can't wander behind the dialog |
-| After a screen change, focus moves to the new screen's title | Keyboard and screen-reader users aren't left on an empty page |
+| After a screen change, focus moves to the new screen's title; inside a game, starting, restarting or playing a round again focuses the speaker button | Keyboard and screen-reader users aren't left on an empty page; the speaker is the first thing to use in a round |
 | Screen-reader messages go through `announce()` (`src/ui/dialog.ts`), not new `aria-live` elements | Live regions recreated on every render aren't read aloud |
 | Borders of empty slots and inputs use `--line` (at least 3:1 contrast) | Kids must see where letters go |
 | Media "play" icon points right even in RTL | Media controls aren't mirrored |

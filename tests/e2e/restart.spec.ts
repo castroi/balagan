@@ -85,7 +85,7 @@ for (const game of GAMES) {
       await expect(page.locator('.stage.center')).toContainText('מילה 2 מתוך 3');
       const restart = restartButton(page);
       await expect(restart).toBeVisible();
-      // Smaller than the round Start button, and a clear gap below it.
+      // Smaller than the round Start button, and well below it (the "מילה N מתוך M" line sits between them).
       const start = (await page.locator('.start-btn').boundingBox())!;
       const box = (await restart.boundingBox())!;
       expect(box.height).toBeLessThan(start.height);
@@ -115,6 +115,8 @@ for (const game of GAMES) {
 }
 
 test('a finished round starts fresh: Start only, no restart button', async ({ page }) => {
+  // A recorded voice, so the end screen doesn't wait on the device's speech.
+  await recordSpeech(page);
   await save(page, 'choose-word', 'כעס קעס');
   await card(page, 'choose-word').click();
   await page.locator('.start-btn').click();
