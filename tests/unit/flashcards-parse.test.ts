@@ -162,8 +162,11 @@ describe('flashcards editor', () => {
   });
 
   it(`allows 1 to ${MAX_CARDS} lines`, () => {
+    // 30, more than the other activities: a week's vocabulary list can be 25 words.
+    expect(MAX_CARDS).toBe(30);
     const line = (i: number) => `דוד | uncle${'s'.repeat(i)}`;
     expect(parseFlashcards('').errors).toEqual(['לא הוזנו מילים']);
+    expect(parseFlashcards(Array.from({ length: 25 }, (_, i) => line(i % 15)).join('\n')).errors).toEqual([]);
     expect(parseFlashcards(Array.from({ length: MAX_CARDS }, (_, i) => line(i % 15)).join('\n')).errors).toEqual([]);
     expect(parseFlashcards(Array.from({ length: MAX_CARDS + 1 }, (_, i) => line(i % 15)).join('\n')).errors).toEqual([
       `אפשר עד ${MAX_CARDS} שורות (הוזנו ${MAX_CARDS + 1})`,

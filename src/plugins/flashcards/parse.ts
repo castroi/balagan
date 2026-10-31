@@ -11,8 +11,8 @@ import {
 } from '../../core/scripts';
 import type { ParseResult } from '../types';
 
-/** Cards per list: the same cap as the other activities (short share links). */
-export const MAX_CARDS = 20;
+/** Cards per list: 30, more than the other activities (a vocabulary list is longer than a spelling list; the share link still fits). */
+export const MAX_CARDS = 30;
 /** Characters per part, spaces included, marks not counted: fits the card on a 360px phone. */
 export const MAX_CHARS = 20;
 /** The only separator between the parts of a line ("/", "-" and the maqaf appear inside words). */
