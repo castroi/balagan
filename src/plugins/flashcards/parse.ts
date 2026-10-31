@@ -11,8 +11,13 @@ import {
 } from '../../core/scripts';
 import type { ParseResult } from '../types';
 
-/** Cards per list: the same cap as the other activities (short share links). */
-export const MAX_CARDS = 20;
+/** Cards per list in the editor: 30, more than the other activities (a vocabulary list is longer than a spelling list). */
+export const MAX_CARDS = 30;
+/**
+ * Saved and shared lists are only checked against this safety cap, never against MAX_CARDS:
+ * the editor limit may grow again, and data within a later limit must keep loading.
+ */
+export const STORED_MAX_CARDS = 100;
 /** Characters per part, spaces included, marks not counted: fits the card on a 360px phone. */
 export const MAX_CHARS = 20;
 /** The only separator between the parts of a line ("/", "-" and the maqaf appear inside words). */
@@ -142,7 +147,11 @@ function checkCard(rawParts: readonly string[], line: number, strictMarks: boole
 }
 
 /** Checks the whole list; `lines` are the parts of each line. */
-function checkList(lines: readonly (readonly string[])[], strictMarks: boolean): ParseResult<FlashcardsData> {
+function checkList(
+  lines: readonly (readonly string[])[],
+  strictMarks: boolean,
+  maxCards: number,
+): ParseResult<FlashcardsData> {
   const errors: string[] = [];
   const warnings: string[] = [];
   const cards: Card[] = [];
@@ -162,7 +171,7 @@ function checkList(lines: readonly (readonly string[])[], strictMarks: boolean):
   });
 
   if (lines.length === 0) errors.push('לא הוזנו מילים');
-  if (lines.length > MAX_CARDS) errors.push(`אפשר עד ${MAX_CARDS} שורות (הוזנו ${lines.length})`);
+  if (lines.length > maxCards) errors.push(`אפשר עד ${maxCards} שורות (הוזנו ${lines.length})`);
   if (dupes.length) warnings.push(`מילים שמופיעות פעמיים באותה שפה: ${dupes.join(', ')}`);
 
   return { data: errors.length ? null : { cards }, errors, warnings };
@@ -175,7 +184,7 @@ export function parseFlashcards(text: string, { strictMarks = true } = {}): Pars
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
     .map((l) => l.split(SEPARATOR));
-  return checkList(lines, strictMarks);
+  return checkList(lines, strictMarks, MAX_CARDS);
 }
 
 /** One line of editor text for a card; also its key for saved progress. */
@@ -196,5 +205,6 @@ export function deserializeFlashcards(raw: unknown, version: number): Flashcards
       c.every((p) => typeof p === 'string' && !p.includes(SEPARATOR)),
   );
   if (!valid) return null;
-  return checkList(cards as string[][], false).data;
+  // The editor's line limit is an editor-only rule: stored data is checked against the safety cap only.
+  return checkList(cards as string[][], false, STORED_MAX_CARDS).data;
 }

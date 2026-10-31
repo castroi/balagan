@@ -81,7 +81,7 @@ Automated tests can't cover these:
 - [ ] Choose Word with 4 long words (8–10 letters with niqqud) on the smallest phone: one column, readable niqqud, no scrolling.
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
 - [ ] Edit screen → הגדרות: the time the letter pair stays after a word feels right for the kid.
-- [ ] Share link with a full week of all four activities (20 words each, 4 options per Choose Word line, 20 three-part Arabic cards with harakat), sent and opened from WhatsApp, loads all four.
+- [ ] Share link with a full week of all four activities (20 words each, 4 options per Choose Word line, 30 three-part Arabic cards with harakat at the 20-character limit), sent and opened from WhatsApp, loads all four.
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
 - [ ] In each game, mid-round: "מתחילים מהתחלה" on the start screen goes back to word 1 and keeps the total points; a quick tap on "ממשיכים" never hits it by mistake.
