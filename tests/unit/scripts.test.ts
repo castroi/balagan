@@ -10,6 +10,9 @@ describe('detectLang', () => {
     expect(detectLang('خال uncle')).toBe('mixed');
     expect(detectLang('דוד')).toBeNull();
     expect(detectLang('12')).toBeNull();
+    // × and ÷ sit among the Latin letters in Unicode but aren't letters; a tatweel isn't an Arabic letter.
+    expect(detectLang('×÷')).toBeNull();
+    expect(detectLang('ـ')).toBeNull();
   });
 });
 
@@ -28,6 +31,11 @@ describe('foreign text cleaning', () => {
   it('turns Arabic presentation forms into regular letters', () => {
     expect(normalizeArabic('ﺧﺎﻝ')).toBe('خال');
     expect(normalizeArabic('uncle')).toBe('uncle');
+    // Harakat forms: the bare mark, without the space (FE76) or tatweel (FE77) NFKC adds.
+    expect(normalizeArabic('بﹶ')).toBe('بَ');
+    expect(normalizeArabic('بﹷ')).toBe('بَ');
+    // Then NFC: a presentation alef followed by a hamza above becomes أ.
+    expect(normalizeArabic('ﺍٔ')).toBe('أ');
   });
 
   it('turns curly apostrophes into the ASCII one', () => {
@@ -38,6 +46,7 @@ describe('foreign text cleaning', () => {
 describe('cleanText', () => {
   it('cleans like normalizeText but keeps apostrophes', () => {
     expect(cleanText("‏don't\r\n")).toBe("don't\n");
+    expect(cleanText('؜خال')).toBe('خال');
     expect(toGeresh(cleanText("ג'ירפה"))).toBe(normalizeText("ג'ירפה"));
   });
 

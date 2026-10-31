@@ -108,6 +108,19 @@ describe('flashcards editor', () => {
   it('turns Arabic presentation forms (copied from a PDF) into regular letters', () => {
     // ﺧﺎﻝ: the initial, final and isolated shapes of خ ا ل.
     expect(parseFlashcards('דוד | ﺧﺎﻝ').data?.cards[0][1]).toBe('خال');
+    // Presentation-form harakat become the bare marks: no space and no tatweel added.
+    const r = parseFlashcards('דוד | ﺧﺎﻝﹷ');
+    expect(r.warnings).toEqual([]);
+    expect(r.data?.cards[0][1]).toBe('خالَ');
+  });
+
+  it('removes the invisible Arabic Letter Mark and rejects invisible number signs', () => {
+    expect(parseFlashcards('דוד | ؜خال').data?.cards[0][1]).toBe('خال');
+    expect(parseFlashcards('דוד | ؀خال').errors).toEqual(['שורה 1: בחלק השני: U+0600 לא שייך למילה בערבית']);
+  });
+
+  it('a tatweel alone is not an Arabic word', () => {
+    expect(parseFlashcards('דוד | ـ').errors[0]).toContain('צריך את המילה בערבית או באנגלית');
   });
 
   it('warns about a tatweel stretching an Arabic word', () => {
@@ -130,6 +143,7 @@ describe('flashcards editor', () => {
   it('allows one note in parentheses, only in the Hebrew word', () => {
     expect(parseFlashcards('בן (צאצא) | ابن').errors).toEqual([]);
     expect(parseFlashcards('בן (צאצא | ابن').errors).toEqual(['שורה 1: סוגריים בלי סגירה']);
+    expect(parseFlashcards('בן )צאצא( | ابن').errors).toEqual(['שורה 1: סוגריים בלי פתיחה — כתבו ( לפני ההערה ו-) אחריה']);
     expect(parseFlashcards('בן (א) (ב) | ابن').errors).toEqual(['שורה 1: אפשר רק הערה אחת בסוגריים']);
     expect(parseFlashcards('(צאצא) | ابن').errors).toEqual(['שורה 1: חסרה מילה בעברית מחוץ לסוגריים']);
     expect(parseFlashcards('בן () | ابن').errors).toEqual(['שורה 1: סוגריים ריקים — כתבו בהם הערה או מחקו אותם']);
@@ -241,8 +255,14 @@ describe('flashcards plugin', () => {
   it('summarises saved progress, keyed by the full lines', () => {
     expect(flashcards.summary(data, undefined)).toEqual({ line: '2 מילים · 0 הושלמו', fraction: 0 });
     const keys = data.cards.map(cardLine);
+    const known = answer(newCardsProgress(keys, seededRng(1)), true).progress;
+    expect(flashcards.summary(data, known)).toEqual({ line: '2 מילים · 1 הושלמה', fraction: 0.5 });
+    // A card coming back counts in the bar: 1 of 3, and still not full after the first pass.
     const p = answer(newCardsProgress(keys, seededRng(1)), false).progress;
-    expect(flashcards.summary(data, p)).toEqual({ line: '2 מילים · 1 הושלמה', fraction: 0.5 });
+    expect(flashcards.summary(data, p).fraction).toBeCloseTo(1 / 3);
+    const firstPassDone = answer(p, true).progress;
+    expect(flashcards.summary(data, firstPassDone)).toMatchObject({ line: '2 מילים · 2 הושלמו' });
+    expect(flashcards.summary(data, firstPassDone).fraction).toBeLessThan(1);
     const changed = parseFlashcards('דוד | خال\nילד | child').data!;
     expect(flashcards.summary(changed, p).fraction).toBe(0);
   });

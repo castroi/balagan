@@ -56,7 +56,8 @@ function checkHebrew(text: string, part: number, strictMarks: boolean): string |
   const parens = (text.match(/[()]/g) ?? []).join('');
   if (parens && part !== 0) return `${where}: סוגריים אפשר רק בחלק הראשון`;
   if (parens && parens !== '()') {
-    return parens.length > 2 ? 'אפשר רק הערה אחת בסוגריים' : 'סוגריים בלי סגירה';
+    if (parens.length > 2) return 'אפשר רק הערה אחת בסוגריים';
+    return parens === '(' ? 'סוגריים בלי סגירה' : 'סוגריים בלי פתיחה — כתבו ( לפני ההערה ו-) אחריה';
   }
   for (const char of text) {
     if (!HEBREW_CHAR.test(char) && !HEBREW_PUNCT.test(char) && !(part === 0 && /[()]/.test(char))) {

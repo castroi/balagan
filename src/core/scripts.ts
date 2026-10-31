@@ -4,7 +4,8 @@
  * a known limit: another Latin-script language (e.g. French) would need a
  * language tag in the data (and a `dataVersion` bump), not a new guess here.
  */
-import type { VoiceLang } from '../platform/tts';
+/** Languages the app can speak: Hebrew, plus the foreign languages of "איך אומרים?". */
+export type VoiceLang = 'he' | 'ar' | 'en';
 
 export type ForeignLang = Exclude<VoiceLang, 'he'>;
 
@@ -21,11 +22,16 @@ export const LANGUAGES: Record<ForeignLang, LanguageInfo> = {
 
 const HEBREW_LETTER = /[א-ת]/;
 // Arabic letters, harakat and Arabic punctuation (main block + supplement + extended-A).
-const ARABIC_CHAR = /[؀-ۿݐ-ݿࢠ-ࣿ]/;
-const ARABIC_LETTER = /[ؠ-يٮ-ۓەۮۯۺ-ۼۿݐ-ݿࢠ-ࣉ]/;
-const LATIN_LETTER = /[A-Za-zÀ-ɏ]/;
+// Not U+0600–0605 (invisible number signs) or U+061C (a direction mark, removed by cleanText).
+const ARABIC_CHAR = /[؆-؛؝-ۿݐ-ݿࢠ-ࣿ]/;
+// Letters only: not the tatweel (U+0640), which stretches a word but isn't a letter.
+const ARABIC_LETTER = /[ؠ-ؿف-يٮ-ۓەۮۯۺ-ۼۿݐ-ݿࢠ-ࣉ]/;
+// Latin letters, without × (U+00D7) and ÷ (U+00F7).
+const LATIN_LETTER = /[A-Za-zÀ-ÖØ-öø-ɏ]/;
 /** Arabic presentation forms: letter shapes that come from copying out of PDFs. */
 const ARABIC_PRESENTATION = /[ﭐ-﷿ﹰ-﻿]/g;
+/** Presentation forms of the harakat: NFKC gives a space or a tatweel before the mark. */
+const PRESENTATION_HARAKA = /^[ﹰ-ﹿ]$/;
 /** Tatweel: a line that stretches Arabic words; not a letter. */
 export const TATWEEL = 'ـ';
 
@@ -39,9 +45,17 @@ export function detectLang(text: string): ForeignLang | 'mixed' | null {
   return ar ? 'ar' : en ? 'en' : null;
 }
 
-/** Arabic presentation forms become the regular letters (the same word from any app gives the same characters). */
+/**
+ * Arabic presentation forms become the regular letters and marks (the same word
+ * from any app gives the same characters); NFC then recombines e.g. alef + hamza.
+ */
 export const normalizeArabic = (text: string): string =>
-  text.replace(ARABIC_PRESENTATION, (c) => c.normalize('NFKC'));
+  text
+    .replace(ARABIC_PRESENTATION, (c) => {
+      const plain = c.normalize('NFKC');
+      return PRESENTATION_HARAKA.test(c) ? plain.replace(/^[ ـ]/, '') : plain;
+    })
+    .normalize('NFC');
 
 /** Curly apostrophes become the ASCII one in English ("don’t" = "don't"). */
 export const normalizeLatinApostrophes = (text: string): string => text.replace(/[‘’]/g, "'");

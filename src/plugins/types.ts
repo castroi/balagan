@@ -1,8 +1,8 @@
 import type { Speaker, VoiceLang } from '../platform/tts';
+import type { Sounds } from '../platform/sounds';
 
 /** A voice-test item: Hebrew text, or text with the language its voice speaks. */
 export type SpeakItem = string | { text: string; lang: VoiceLang };
-import type { Sounds } from '../platform/sounds';
 
 export interface ParseResult<D> {
   /** null when there are errors. */

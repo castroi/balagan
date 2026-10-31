@@ -42,6 +42,8 @@ export function cleanText(input: string): string {
     .replace(/\r\n?/g, '\n')
     .replace(/ /g, ' ')
     .replace(INVISIBLE, '')
+    // Arabic Letter Mark: an invisible direction mark, like the ones above.
+    .replace(/؜/g, '')
     .replace(CANTILLATION, '')
     .normalize('NFC');
 }

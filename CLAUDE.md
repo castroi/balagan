@@ -157,12 +157,12 @@ A different kind of game (not letter tiles): its own pure logic (`round.ts`) and
 
 ## How do you say? (איך אומרים?) — decisions
 
-Flashcards for words in another language. A different kind of game: its own pure logic (`round.ts`, with its own progress that adds the repeated cards) and view, reusing scoring sounds, speech and the start screen.
+Flashcards for words in another language. A different kind of game: its own pure logic (`round.ts`, with its own progress that adds the repeated cards) and view, reusing `progress.ts` (order and fingerprint), `text.ts`, sounds, speech and the start screen.
 
 | Rule | Why |
 |---|---|
 | One activity for every foreign language (`id: flashcards`); title "איך אומרים?", home card tiles אבא / ? | Arabic now, English later; a fixed foreign tile would mislead when the list is in the other language |
-| Each line: Hebrew `\|` the foreign word in its own letters `\|` its reading in Hebrew letters (optional). Only `\|` separates; `/`, `-` and the maqaf belong to words. Up to 20 lines, 20 characters per part (spaces count, marks don't) | The voice needs the real spelling; the kid reads Hebrew letters; "ילד קטן / תינוק" must stay one part |
+| Each line: Hebrew `\|` the foreign word in its own letters `\|` its reading in Hebrew letters (optional). Only `\|` separates; `/`, `-` and the maqaf belong to words. Up to 20 lines, 20 characters per part (spaces and a note in parentheses count, marks don't) | The voice needs the real spelling; the kid reads Hebrew letters; "ילד קטן / תינוק" must stay one part |
 | The foreign word's letters decide the voice: Arabic letters → Arabic, Latin letters → English. Hebrew letters, both scripts, or no letters there are errors | No setting for the parent. Known limit: another Latin-script language (e.g. French) needs a language tag in the data and a `dataVersion` bump, not a new guess |
 | Back of the card: the reading in Hebrew letters when given, else the foreign word itself. English under its reading is also shown small; Arabic script never is when a reading exists | The owner's choice: young kids can't read Arabic letters; older kids benefit from seeing English spelling |
 | Front: the Hebrew word (spoken in Hebrew), a note in parentheses shown smaller and not spoken, and "איך אומרים ב<שפה>?" | Voice before text; with mixed lists the kid must know which language is asked |
@@ -171,6 +171,8 @@ Flashcards for words in another language. A different kind of game: its own pure
 | Every first-pass card gives 5 points whatever the answer; "עוד לא" cards come back once at the end for 0 points | Points must never reward saying "ידעתי"; repeats must not double the points |
 | No voice for the language on this device: no speaker button on the back and a line on the start screen | The kid often plays on another phone than the one the words were typed on |
 | Saved progress is keyed by the full lines | Changing a card starts a fresh round |
+| Progress dots only when every card repeated would still fit (5 cards or fewer, `order.length × 2 ≤ MAX_DOTS`), else the "4 / 20" counter; the home bar counts the repeated cards | The indicator never switches in the middle of a round; the bar is full only when the round is |
+| After "ידעתי" the next Hebrew word waits 0.45 s (`NEXT_WORD_PAUSE_MS`) | The "correct" sound and the word don't play over each other |
 
 ## Not done on purpose (possible later)
 

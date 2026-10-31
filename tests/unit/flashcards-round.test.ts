@@ -6,7 +6,6 @@ import {
   currentCard,
   isRepeat,
   isValidCardsProgress,
-  knownCount,
   newCardsProgress,
   roundLength,
   type CardsProgress,
@@ -49,7 +48,6 @@ describe('flashcards round', () => {
     expect(seen).toEqual(newCardsProgress(keys, seededRng(1)).order);
     expect(points).toBe(3 * CARD_POINTS);
     expect(p.roundPoints).toBe(3 * CARD_POINTS);
-    expect(knownCount(p)).toBe(3);
   });
 
   it('"עוד לא" cards come back once at the end, for 0 points', () => {
@@ -67,7 +65,6 @@ describe('flashcards round', () => {
     expect(repeat.points).toBe(0);
     expect(repeat.p.done).toBe(true);
     expect(repeat.p.roundPoints).toBe(3 * CARD_POINTS);
-    expect(knownCount(repeat.p)).toBe(1);
     expect([...seen, ...repeat.seen]).toHaveLength(roundLength(repeat.p));
   });
 

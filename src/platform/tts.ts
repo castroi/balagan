@@ -3,10 +3,10 @@
  * iPhone only allows speech after a tap, so the first word of a round is
  * spoken from the Start button.
  */
-export type VoiceStatus = 'checking' | 'ok' | 'no-hebrew' | 'unsupported';
+import type { VoiceLang } from '../core/scripts';
 
-/** Languages the app can speak: Hebrew, plus the foreign languages of "איך אומרים?". */
-export type VoiceLang = 'he' | 'ar' | 'en';
+export type { VoiceLang };
+export type VoiceStatus = 'checking' | 'ok' | 'no-hebrew' | 'unsupported';
 
 export interface Speaker {
   /** Resolves when speaking ends (or fails / times out). Never rejects. Hebrew unless `lang` says otherwise. */
@@ -37,7 +37,9 @@ export function createSpeaker(): Speaker {
   const findVoice = (lang: VoiceLang): SpeechSynthesisVoice | null => {
     if (!synth) return null;
     const voices = synth.getVoices().filter((v) => LANG_TAGS[lang].test(v.lang));
-    return voices.find((v) => v.localService) ?? voices[0] ?? null;
+    // The usual accent first (en-US rather than en-IN), then a voice on the device.
+    const exact = voices.filter((v) => v.lang.replace('_', '-').toLowerCase() === DEFAULT_TAG[lang].toLowerCase());
+    return exact.find((v) => v.localService) ?? exact[0] ?? voices.find((v) => v.localService) ?? voices[0] ?? null;
   };
 
   // The voice list loads asynchronously; poll briefly as well as listening,

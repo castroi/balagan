@@ -40,9 +40,6 @@ export const isRepeat = (p: CardsProgress): boolean => p.index >= p.order.length
 export const currentCard = (p: CardsProgress): number =>
   isRepeat(p) ? p.again[p.index - p.order.length] : p.order[p.index];
 
-/** Cards known on the first pass. */
-export const knownCount = (p: CardsProgress): number => Math.min(p.index, p.order.length) - p.again.length;
-
 /**
  * The kid's answer for the current card. On the first pass it gives CARD_POINTS
  * and "עוד לא" puts the card at the end; on the repeat it just moves on.

@@ -24,6 +24,9 @@ import {
 
 type Phase = 'intro' | 'front' | 'back' | 'end';
 
+/** After "ידעתי", the next word waits for the short "correct" sound. */
+export const NEXT_WORD_PAUSE_MS = 450;
+
 /** Above this many letters a side uses a smaller font, so 20 characters still fit the card. */
 const LONG_TEXT = 10;
 
@@ -64,9 +67,19 @@ export function mountFlashcards(
     void ctx.speaker.canSpeak(lang).then((ok) => {
       if (ok || destroyed) return;
       silent.add(lang);
-      if (phase === 'intro' || phase === 'back') render();
+      // The voice list can arrive seconds later: on the start screen only add the line, so the
+      // Start button (and its focus, or a tap in progress) stays where it is.
+      if (phase === 'intro') root.querySelector('.stage.center')?.appendChild(noVoiceLine(lang));
+      else if (phase === 'back') render();
     });
   }
+
+  /** Pending speech of the next card's word, waiting for the "correct" sound to end. */
+  let nextWordTimer: number | null = null;
+  const cancelNextWord = () => {
+    if (nextWordTimer !== null) window.clearTimeout(nextWordTimer);
+    nextWordTimer = null;
+  };
 
   const card = (): Card => cards[currentCard(progress)];
 
@@ -92,12 +105,12 @@ export function mountFlashcards(
   }
 
   function onCard() {
+    cancelNextWord();
     if (phase === 'front') {
       phase = 'back';
       justTurned = true;
+      // Screen readers hear the back through the card's label when it gets focus; no extra announce.
       render();
-      const c = card();
-      announce(c[2] ?? c[1]);
     }
     // On the back, a tap says the word again (it never turns back: no endless flipping).
     speakSide();
@@ -108,21 +121,26 @@ export function mountFlashcards(
     const result = answer(progress, knew);
     progress = result.progress;
     ctx.commit(progress, result.points);
+    ctx.speaker.cancel();
     if (knew) ctx.sounds.play('correct');
     if (progress.done) {
       phase = 'end';
-      ctx.speaker.cancel();
       render();
       return;
     }
     phase = 'front';
     render();
     root.querySelector<HTMLElement>('.flash-card')?.focus({ preventScroll: true });
-    speakSide();
+    // Let the short "correct" sound finish first, so it doesn't muddy the next word.
+    nextWordTimer = window.setTimeout(() => {
+      nextWordTimer = null;
+      if (!destroyed && phase === 'front') speakSide();
+    }, knew ? NEXT_WORD_PAUSE_MS : 0);
   }
 
   /** A new round (new order, round points 0; the total is kept): "לשחק שוב" at the end, or restart on the start screen. */
   function playAgain() {
+    cancelNextWord();
     ctx.sounds.unlock();
     progress = newCardsProgress(keys, defaultRng);
     ctx.commit(progress);
@@ -143,7 +161,8 @@ export function mountFlashcards(
     const total = roundLength(progress);
     const current = Math.min(progress.index + 1, total);
     const label = `מילה ${current} מתוך ${total}`;
-    if (total > MAX_DOTS) {
+    // Decided by the most the round can grow to (every card repeated), so it never switches mid-round.
+    if (progress.order.length * 2 > MAX_DOTS) {
       return h('div', { class: 'counter', role: 'img', 'aria-label': label, dir: 'ltr' }, `${current} / ${total}`);
     }
     const dots = h('div', { class: 'dots', role: 'img', 'aria-label': label });
@@ -250,10 +269,12 @@ export function mountFlashcards(
       onRestart: restart,
     });
     // The kid may play on another phone than the one the words were typed on: say it here too.
-    for (const lang of silent) {
-      view.appendChild(h('p', { class: 'muted flash-novoice' }, `אין קול ב${LANGUAGES[lang].name} במכשיר הזה`));
-    }
+    for (const lang of silent) view.appendChild(noVoiceLine(lang));
     return view;
+  }
+
+  function noVoiceLine(lang: ForeignLang) {
+    return h('p', { class: 'muted flash-novoice' }, `אין קול ב${LANGUAGES[lang].name} במכשיר הזה`);
   }
 
   function endView() {
@@ -317,6 +338,7 @@ export function mountFlashcards(
 
   return () => {
     destroyed = true;
+    cancelNextWord();
     ctx.speaker.cancel();
     root.remove();
   };

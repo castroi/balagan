@@ -26,6 +26,12 @@ async function start(page: Page) {
   await expect(flash(page)).toBeVisible();
 }
 
+// A recorded voice in every test: real headless voices differ between Chromium and WebKit
+// (WebKit may have none, which would show the "no voice" screens).
+test.beforeEach(async ({ page }) => {
+  await recordSpeech(page);
+});
+
 /** A device voice list with only these languages (the rest of the recorder stays). */
 async function onlyVoices(page: Page, langs: string[]) {
   await page.addInitScript((tags) => {
@@ -85,7 +91,6 @@ test('home card: title, word count and the אבא / ? tiles', async ({ page }) =
 });
 
 test('a card: Hebrew spoken, turned over to the reading with the Arabic voice, then "ידעתי"', async ({ page }) => {
-  await recordSpeech(page);
   await saveCards(page, "בן (צאצא) | ابن | אִבְּן");
   await start(page);
   await expect(flash(page)).toContainText('איך אומרים בערבית?');
@@ -135,7 +140,6 @@ test('English with a reading: the reading big, the English spelling small under 
 });
 
 test('"עוד לא": the card comes back once at the end, with no extra points', async ({ page }) => {
-  await recordSpeech(page);
   await saveCards(page, 'דוד | خال');
   await start(page);
   await flash(page).click();
@@ -167,9 +171,53 @@ test('progress survives closing the app, without extra points', async ({ page })
   expect(s.points).toBe(5);
 });
 
+test('closing the app during the repeat: it resumes on the "עוד לא" card, with no extra points', async ({ page }) => {
+  await saveCards(page, 'דוד | خال');
+  await start(page);
+  await flash(page).click();
+  await notYet(page).click();
+  await page.reload();
+  await card(page).click();
+  await expect(page.locator('.start-btn')).toContainText('ממשיכים');
+  await expect(page.locator('.stage.center')).toContainText('מילה 2 מתוך 2');
+  await page.locator('.start-btn').click();
+  await expect(flash(page).locator('.flash-main')).toHaveText('דוד');
+  await flash(page).click();
+  await knew(page).click();
+  await expect(page.locator('.end')).toContainText('5 נקודות');
+  const s = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), KEY);
+  expect(s.points).toBe(5);
+});
+
+test('keyboard: focus starts on the speaker, then stays on the card after turning it and after an answer', async ({ page }) => {
+  await saveCards(page, 'דוד | خال\nילד | child');
+  await card(page).click();
+  await page.locator('.start-btn').click();
+  await expect(page.locator('.speaker-btn')).toBeFocused();
+  // (Not Tab: WebKit doesn't move to buttons with Tab by default.)
+  await flash(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(flash(page)).toHaveClass(/back/);
+  await expect(flash(page)).toBeFocused();
+  await knew(page).click();
+  await expect(flash(page)).not.toHaveClass(/back/);
+  await expect(flash(page)).toBeFocused();
+});
+
+test('after "ידעתי" the next word waits for the short sound', async ({ page }) => {
+  await saveCards(page, 'דוד | خال\nילד | child');
+  await start(page);
+  await flash(page).click();
+  await expect.poll(async () => (await spoken(page)).length).toBe(2);
+  await knew(page).click();
+  // Not at once (the "correct" sound is playing)…
+  expect(await spoken(page)).toHaveLength(2);
+  // …but right after it.
+  await expect.poll(async () => (await spoken(page)).length).toBe(3);
+});
+
 test.describe('a phone without an Arabic voice', () => {
   test.beforeEach(async ({ page }) => {
-    await recordSpeech(page);
     await onlyVoices(page, ['he-IL', 'en-US']);
   });
 
