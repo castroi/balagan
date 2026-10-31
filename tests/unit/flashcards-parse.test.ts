@@ -8,6 +8,7 @@ import {
   MAX_CARDS,
   MAX_CHARS,
   parseFlashcards,
+  STORED_MAX_CARDS,
   toText,
 } from '../../src/plugins/flashcards/parse';
 import { flashcards } from '../../src/plugins/flashcards';
@@ -166,7 +167,6 @@ describe('flashcards editor', () => {
     expect(MAX_CARDS).toBe(30);
     const line = (i: number) => `דוד | uncle${'s'.repeat(i)}`;
     expect(parseFlashcards('').errors).toEqual(['לא הוזנו מילים']);
-    expect(parseFlashcards(Array.from({ length: 25 }, (_, i) => line(i % 15)).join('\n')).errors).toEqual([]);
     expect(parseFlashcards(Array.from({ length: MAX_CARDS }, (_, i) => line(i % 15)).join('\n')).errors).toEqual([]);
     expect(parseFlashcards(Array.from({ length: MAX_CARDS + 1 }, (_, i) => line(i % 15)).join('\n')).errors).toEqual([
       `אפשר עד ${MAX_CARDS} שורות (הוזנו ${MAX_CARDS + 1})`,
@@ -224,6 +224,15 @@ describe('flashcards data', () => {
     // A shared foreign word in Hebrew letters can't be spoken in its language.
     expect(deserializeFlashcards({ cards: [['דוד', 'חאל']] }, 1)).toBeNull();
     expect(deserializeFlashcards({ cards: [] }, 1)).toBeNull();
+  });
+
+  it('loads stored and shared lists of any length up to the safety cap (the editor limit is editor-only)', () => {
+    const cards = (n: number) => ({ cards: Array.from({ length: n }, (_, i) => ['דוד', `uncle${'s'.repeat(i % 15)}`]) });
+    expect(deserializeFlashcards(cards(MAX_CARDS), 1)?.cards).toHaveLength(MAX_CARDS);
+    // A list from a later version with a higher editor limit still loads here.
+    expect(deserializeFlashcards(cards(MAX_CARDS + 1), 1)?.cards).toHaveLength(MAX_CARDS + 1);
+    expect(deserializeFlashcards(cards(STORED_MAX_CARDS), 1)?.cards).toHaveLength(STORED_MAX_CARDS);
+    expect(deserializeFlashcards(cards(STORED_MAX_CARDS + 1), 1)).toBeNull();
   });
 
   it('re-checks leniently: editor-only mark rules are not applied', () => {
