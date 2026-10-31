@@ -1,6 +1,6 @@
 # Balagan (בלגן) — project rules
 
-Hebrew writing practice for one kid (up to age 10) on a phone. A parent pastes the week's content; the kid plays. Static site on Vercel, no server, no database.
+Hebrew writing practice — and words in another language (Arabic, English) — for one kid (up to age 10) on a phone. A parent pastes the week's content; the kid plays. Static site on Vercel, no server, no database.
 
 Each rule has a one-line **why**. Don't change a rule without understanding its reason; if a rule must change, update this file in the same change.
 
@@ -24,11 +24,12 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | `npm run build` runs type check (app, tests and config files) + unit tests before building | Vercel won't deploy a broken version |
 | Offline service worker generated at build time (`build/service-worker.template.js`): caches every built file on install, one cache per build (version = hash of every file's content) | The app opens offline after a single visit; old versions don't pile up |
 | Pages network-first with a 3-second timeout, **no update prompt** | The latest version loads automatically when online; a weak connection doesn't block the kid |
-| Interface in Hebrew, right to left | It's for the kid |
+| Interface in Hebrew, right to left; foreign words (Arabic, English) get their own `lang` and `dir` on their element | It's for the kid; punctuation and screen readers need the word's real language |
 | Version only on the edit screen, set in `package.json` | Not distracting during play; one place to change it |
 | No PIN; Clear asks to confirm and offers undo | Simple for the parent, safe from accidental taps |
-| Device text-to-speech only; no recordings in v1 | Recordings can't travel in a link |
-| Voice-test buttons and a "no Hebrew voice" warning on the edit screen | Voice quality varies by phone |
+| Device text-to-speech only; no recordings in v1. `speak(text, lang)` speaks Hebrew, Arabic or English (`src/platform/tts.ts`) | Recordings can't travel in a link |
+| A foreign word is never read by another language's voice: with no voice for it the word stays silent | A wrong voice teaches a wrong sound |
+| Voice-test buttons and a "no Hebrew voice" warning on the edit screen; a "no Arabic/English voice" warning only for languages in the list | Voice quality varies by phone; Android often lacks the Arabic voice pack |
 | Practice only — nothing is sent anywhere | No accounts, no tracking |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
@@ -38,7 +39,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 | Rule | Why |
 |---|---|
-| Reuse the tokens in `src/styles.css` (colors, Rubik for UI, Noto Sans Hebrew for letters, yellow tiles with dark border) | One consistent, calm look |
+| Reuse the tokens in `src/styles.css` (colors, Rubik for UI and English, Noto Sans Hebrew for letters, Noto Sans Arabic for Arabic via `:lang(ar)`, yellow tiles with dark border) | One consistent, calm look |
 | Touch targets at least 44px; letter tiles bigger | Kids' fingers are less precise (Apple's minimum is 44pt) |
 | Icons and voice before text | Younger kids may not read well yet |
 | Every game starts with a Start button | iPhone allows sound and speech only after a tap |
@@ -60,7 +61,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 |---|---|
 | Store only compact source text (e.g. the word list), never computed state, audio or images | All content travels inside one link |
 | Clean pasted text with `normalizeText` (`src/core/unicode.ts`) before validating or storing | The same word copied from different apps must produce identical characters |
-| Every apostrophe (', ‘, ’) becomes the Hebrew geresh ׳; the editor allows at most 4 marks per letter, no repeated mark and one geresh | iPhone types curly apostrophes; repeated marks are pasting mistakes that bloat links |
+| In Hebrew text every apostrophe (', ‘, ’) becomes the Hebrew geresh ׳; the editor allows at most 4 marks per letter, no repeated mark and one geresh. In English the curly ones become ASCII `'`; Arabic marks are never checked by the Hebrew rules (`cleanText` + `toGeresh` per part) | iPhone types curly apostrophes; repeated marks are pasting mistakes that bloat links; a geresh in "don't" is wrong |
 | Saved and shared data is re-checked leniently (`deserialize` doesn't apply new editor-only rules) | Words saved before a rule existed must keep working |
 | Error messages show invisible characters as a code point (e.g. `U+034F`) | The parent must be able to see what's wrong |
 | Use content exactly as the parent typed it (niqqud, final letters) | The parent controls the content |
@@ -89,7 +90,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Never change an activity's `id` | It's the key in storage and in share links |
 | Bump `dataVersion` when the data shape changes; `deserialize` keeps reading old versions | Saved data and old links keep working |
 | Add points and save progress in one `ctx.commit(progress, points)` | Points are never counted twice after a reload |
-| Words/items order random per round; never show the answer directly | Real practice, not memorizing positions |
+| Words/items order random per round; never show the answer directly (exception: flashcards turn over to the answer by design) | Real practice, not memorizing positions |
 
 **Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item. Add the new game to `GAMES` in `tests/e2e/restart.spec.ts` (continue/restart on the start screen). `npm run test:coverage` prints the coverage report (CI uploads it as `coverage-report`); Choose Word's `parse.ts` and `round.ts` must stay at 95% or more.
 
@@ -154,6 +155,23 @@ A different kind of game (not letter tiles): its own pure logic (`round.ts`) and
 | Saved progress is keyed by the full lines (word + wrong words) | Changing a line starts a fresh round |
 | Home card tiles כַּעַס / קַעַס | Shows what the activity is about |
 
+## How do you say? (איך אומרים?) — decisions
+
+Flashcards for words in another language. A different kind of game: its own pure logic (`round.ts`, with its own progress that adds the repeated cards) and view, reusing scoring sounds, speech and the start screen.
+
+| Rule | Why |
+|---|---|
+| One activity for every foreign language (`id: flashcards`); title "איך אומרים?", home card tiles אבא / ? | Arabic now, English later; a fixed foreign tile would mislead when the list is in the other language |
+| Each line: Hebrew `\|` the foreign word in its own letters `\|` its reading in Hebrew letters (optional). Only `\|` separates; `/`, `-` and the maqaf belong to words. Up to 20 lines, 20 characters per part (spaces count, marks don't) | The voice needs the real spelling; the kid reads Hebrew letters; "ילד קטן / תינוק" must stay one part |
+| The foreign word's letters decide the voice: Arabic letters → Arabic, Latin letters → English. Hebrew letters, both scripts, or no letters there are errors | No setting for the parent. Known limit: another Latin-script language (e.g. French) needs a language tag in the data and a `dataVersion` bump, not a new guess |
+| Back of the card: the reading in Hebrew letters when given, else the foreign word itself. English under its reading is also shown small; Arabic script never is when a reading exists | The owner's choice: young kids can't read Arabic letters; older kids benefit from seeing English spelling |
+| Front: the Hebrew word (spoken in Hebrew), a note in parentheses shown smaller and not spoken, and "איך אומרים ב<שפה>?" | Voice before text; with mixed lists the kid must know which language is asked |
+| Tapping the front turns the card (CSS animation only — never wait for `transitionend`, which reduce motion never fires) and speaks the foreign word; tapping the back says it again, never turns back | Instant with reduce motion; no endless flipping |
+| Then "ידעתי ✓" (green) or "עוד לא ↻" (neutral, never orange — it isn't a mistake), both 64px | Self-check; the colors keep their meaning across games |
+| Every first-pass card gives 5 points whatever the answer; "עוד לא" cards come back once at the end for 0 points | Points must never reward saying "ידעתי"; repeats must not double the points |
+| No voice for the language on this device: no speaker button on the back and a line on the start screen | The kid often plays on another phone than the one the words were typed on |
+| Saved progress is keyed by the full lines | Changing a card starts a fresh round |
+
 ## Not done on purpose (possible later)
 
-"Check at the end" mode for older kids, parental gate/PIN, hints, skip button, parent voice recordings, timer, distractor letters in Scrambled Words, update prompt, spoken instructions for non-readers, phone vibration, bundling fonts in the project (now loaded from Google Fonts; the service worker caches them on install, best effort).
+"Check at the end" mode for older kids, a quiz mode for flashcards (hear the foreign word, choose the Hebrew meaning), languages other than Arabic and English, parental gate/PIN, hints, skip button, parent voice recordings, timer, distractor letters in Scrambled Words, update prompt, spoken instructions for non-readers, phone vibration, bundling fonts in the project (now loaded from Google Fonts; the service worker caches them on install, best effort).
