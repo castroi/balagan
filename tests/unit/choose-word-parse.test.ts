@@ -226,8 +226,8 @@ describe('choose word saved and shared data', () => {
 describe('choose word plugin', () => {
   const data = parseChooseWord('כעס קעס כאס\nצער סער').data!;
 
-  it('is registered after the other activities, with a stable id', () => {
-    expect(PLUGINS.map((p) => p.id)).toEqual(['scrambled-words', 'confusing-letters', 'choose-word']);
+  it('is registered after the letter games, with a stable id', () => {
+    expect(PLUGINS.map((p) => p.id)).toEqual(['scrambled-words', 'confusing-letters', 'choose-word', 'flashcards']);
     expect(getPlugin('choose-word')).toBe(chooseWord);
     expect(chooseWord.dataVersion).toBe(1);
     expect(chooseWord.title).toBe('בחרו את המילה');

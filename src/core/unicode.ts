@@ -30,14 +30,30 @@ export const MAX_MARKS_PER_LETTER = 4;
  * Every kind of apostrophe becomes the Hebrew geresh (׳).
  */
 export function normalizeText(input: string): string {
+  return toGeresh(cleanText(input));
+}
+
+/**
+ * The same cleaning as `normalizeText`, but apostrophes are left alone — for
+ * text that isn't all Hebrew (e.g. "don't" in English), where a geresh is wrong.
+ */
+export function cleanText(input: string): string {
   return input
     .replace(/\r\n?/g, '\n')
     .replace(/ /g, ' ')
     .replace(INVISIBLE, '')
+    // Arabic Letter Mark: an invisible direction mark, like the ones above.
+    .replace(/؜/g, '')
     .replace(CANTILLATION, '')
-    .replace(APOSTROPHES, GERESH)
     .normalize('NFC');
 }
+
+/** Every apostrophe (ASCII or curly) becomes the Hebrew geresh ׳. */
+export const toGeresh = (text: string): string => text.replace(APOSTROPHES, GERESH);
+
+/** Runs of Hebrew letters with their marks and gereshes (the words inside a longer text). */
+export const hebrewRuns = (text: string): string[] =>
+  text.match(new RegExp(`[${LETTER}${MARK_CLASS}${GERESH}]+`, 'g')) ?? [];
 
 export type SplitResult =
   | { ok: true; tiles: string[] }

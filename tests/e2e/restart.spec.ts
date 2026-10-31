@@ -17,7 +17,7 @@ const savedRound = (page: Page, id: string) =>
       const s = JSON.parse(localStorage.getItem(key)!);
       const p = s.progress[id];
       const d = s.assignments[id].data;
-      const list = d.words ?? d.items;
+      const list = d.words ?? d.items ?? d.cards;
       return { points: s.points, progress: p, item: p ? list[p.order[p.index]] : undefined };
     },
     [KEY, id] as const,
@@ -26,7 +26,9 @@ const savedRound = (page: Page, id: string) =>
 /** The word that is spoken for the current item. */
 const currentWord = async (page: Page, id: string) => {
   const { item } = await savedRound(page, id);
-  return typeof item === 'string' ? item : (item as { word: string }).word;
+  if (typeof item === 'string') return item;
+  // A flashcard ([Hebrew, foreign, reading?]): its Hebrew side is spoken first.
+  return Array.isArray(item) ? (item[0] as string) : (item as { word: string }).word;
 };
 
 async function placeLetters(page: Page, id: string) {
@@ -43,11 +45,25 @@ async function tapRightWord(page: Page, id: string) {
   await options.nth(i).click();
 }
 
-/** Each game, with content of 3 items and a way to solve the current item. */
+/** Solves the current item without mistakes and skips the celebration (the letter games and Choose Word). */
+const solveAndSkip = (solve: (page: Page, id: string) => Promise<void>) => async (page: Page, id: string) => {
+  await solve(page, id);
+  await expect(page.locator('.celebrate-points')).toHaveText('+10');
+  await page.locator('.celebration').click();
+};
+
+/** Turns the current flashcard over and answers "ידעתי". */
+async function knowCard(page: Page) {
+  await page.locator('.flash-card').click();
+  await page.getByRole('button', { name: 'ידעתי' }).click();
+}
+
+/** Each game, with content of 3 items, a way to finish the current item, and the points it gives. */
 const GAMES = [
-  { id: 'scrambled-words', text: 'כַּעַס\nעָצוּב\nפָּגַע', solve: placeLetters },
-  { id: 'confusing-letters', text: 'סַבָּא צ\nכַּעַס ק\nעָצוּב א', solve: placeLetters },
-  { id: 'choose-word', text: 'כעס קעס\nצער סער\nפגע פגא', solve: tapRightWord },
+  { id: 'scrambled-words', text: 'כַּעַס\nעָצוּב\nפָּגַע', finish: solveAndSkip(placeLetters), points: 10 },
+  { id: 'confusing-letters', text: 'סַבָּא צ\nכַּעַס ק\nעָצוּב א', finish: solveAndSkip(placeLetters), points: 10 },
+  { id: 'choose-word', text: 'כעס קעס\nצער סער\nפגע פגא', finish: solveAndSkip(tapRightWord), points: 10 },
+  { id: 'flashcards', text: 'דוד | خال\nילד | child\nאבא | أب', finish: knowCard, points: 5 },
 ];
 
 const card = (page: Page, id: string) => page.locator(`.card[data-plugin="${id}"]`);
@@ -75,9 +91,8 @@ for (const game of GAMES) {
       await save(page, game.id, game.text);
       await card(page, game.id).click();
       await page.locator('.start-btn').click();
-      await game.solve(page, game.id);
-      await expect(page.locator('.celebrate-points')).toHaveText('+10');
-      await page.locator('.celebration').click();
+      await game.finish(page, game.id);
+      await expect(page.locator('.dots .dot.done')).toHaveCount(1);
       await page.getByRole('button', { name: 'חזרה לבית' }).click();
 
       await card(page, game.id).click();
@@ -98,9 +113,9 @@ for (const game of GAMES) {
       await expect(page.locator('.start-btn')).toHaveCount(0);
       await expect(page.locator('.speaker-btn')).toBeVisible();
       await expect(page.locator('.dots .dot.done')).toHaveCount(0);
-      await expect(page.locator('.points-chip')).toHaveText('10');
+      await expect(page.locator('.points-chip')).toHaveText(String(game.points));
       const saved = await savedRound(page, game.id);
-      expect(saved.points).toBe(10);
+      expect(saved.points).toBe(game.points);
       expect(saved.progress).toMatchObject({ index: 0, roundPoints: 0, done: false });
       expect([...saved.progress.order].sort()).toEqual([0, 1, 2]);
       await expect.poll(async () => (await spoken(page)).at(-1)).toBe(await currentWord(page, game.id));

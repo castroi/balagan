@@ -1,5 +1,8 @@
-import type { Speaker } from '../platform/tts';
+import type { Speaker, VoiceLang } from '../platform/tts';
 import type { Sounds } from '../platform/sounds';
+
+/** A voice-test item: Hebrew text, or text with the language its voice speaks. */
+export type SpeakItem = string | { text: string; lang: VoiceLang };
 
 export interface ParseResult<D> {
   /** null when there are errors. */
@@ -39,8 +42,8 @@ export interface AssignmentPlugin<D> {
   toText(data: D): string;
   /** Validates data from storage or a share link; null if unusable. */
   deserialize(raw: unknown, version: number): D | null;
-  /** Items the parent can listen to in the editor (voice test). */
-  speakItems(data: D): string[];
+  /** Items the parent can listen to in the editor (voice test): Hebrew text, or text in another language. One per item. */
+  speakItems(data: D): SpeakItem[];
   summary(data: D, progress: unknown): { line: string; fraction: number };
   /** Optional "what the kid will see" preview, shown under valid editor content. */
   preview?(data: D): HTMLElement;
