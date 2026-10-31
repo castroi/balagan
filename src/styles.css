@@ -1352,3 +1352,171 @@ body:has(.screen.edit) {
   margin-top: 14px;
   min-width: 220px;
 }
+
+/* ---------- איך אומרים? (flashcards) ---------- */
+/* Arabic shows in its own font, a bit bigger: harakat are small. English uses the UI font (Rubik). */
+:root {
+  --arabic-font: 'Noto Sans Arabic', 'Geeza Pro', Tahoma, sans-serif;
+}
+
+:lang(ar) {
+  font-family: var(--arabic-font);
+}
+
+.game.flash .flash-stage {
+  gap: 16px;
+}
+
+.game.flash .speaker-wrap {
+  min-height: 140px;
+}
+
+/* One big button on a 360×640 phone: the whole card turns over. */
+.flash-card {
+  width: 100%;
+  min-height: 236px;
+  padding: 16px 12px;
+  border-radius: 22px;
+  border: 3px solid var(--ink);
+  background: var(--tile);
+  box-shadow: 0 6px 0 var(--ink);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.flash-card:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.flash-card.back {
+  background: var(--surface);
+}
+
+/* The card turning over: a timer-free CSS animation (no transitionend), switched off with reduce motion. */
+.flash-card.turn {
+  animation: flip-in 0.4s ease-out;
+}
+
+@keyframes flip-in {
+  from {
+    transform: perspective(800px) rotateY(90deg);
+  }
+  to {
+    transform: perspective(800px) rotateY(0);
+  }
+}
+
+.flash-main {
+  font-family: var(--tile-font);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.flash-main.long {
+  font-size: 30px;
+}
+
+.flash-main:lang(en) {
+  font-family: var(--ui-font);
+}
+
+.flash-main:lang(ar) {
+  font-family: var(--arabic-font);
+  font-size: 48px;
+}
+
+.flash-main.long:lang(ar) {
+  font-size: 36px;
+}
+
+.flash-hint,
+.flash-top {
+  font-family: var(--tile-font);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.flash-sub {
+  font-family: var(--ui-font);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.flash-lang {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Same height on both sides, so the card doesn't move when the answer buttons appear. */
+.flash-actions {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.flash-tip {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.flash-actions .btn {
+  min-height: 64px;
+  font-size: 22px;
+  border-width: 3px;
+  border-radius: 18px;
+}
+
+.flash-knew {
+  background: var(--correct);
+}
+
+/* "עוד לא" isn't a mistake: neutral, never orange. */
+.flash-again {
+  background: var(--tray);
+}
+
+.flash-novoice {
+  text-align: center;
+}
+
+.preview-hint {
+  align-self: center;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.preview-arrow {
+  align-self: center;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.mini-word.back {
+  background: var(--surface);
+}
+
+.mini-word:lang(ar) {
+  font-family: var(--arabic-font);
+}
+
+.mini-word:lang(en) {
+  font-family: var(--ui-font);
+}

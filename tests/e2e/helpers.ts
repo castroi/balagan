@@ -7,7 +7,7 @@ export interface Stored {
   progress: Record<string, { order: number[]; index: number; done: boolean }>;
 }
 
-type SpeechWindow = Window & { __spoken: string[] };
+type SpeechWindow = Window & { __spoken: string[]; __spokenLangs: string[] };
 
 /**
  * Replaces the device voice with a recorder, so tests can check what was spoken
@@ -17,6 +17,7 @@ export async function recordSpeech(page: Page) {
   await page.addInitScript(() => {
     const w = window as unknown as SpeechWindow;
     w.__spoken = [];
+    w.__spokenLangs = [];
     class FakeUtterance {
       lang = '';
       rate = 1;
@@ -30,6 +31,7 @@ export async function recordSpeech(page: Page) {
       value: {
         speak(u: FakeUtterance) {
           w.__spoken.push(u.text);
+          w.__spokenLangs.push(u.lang);
           setTimeout(() => u.onend?.(), 50);
         },
         cancel() {},
@@ -42,6 +44,10 @@ export async function recordSpeech(page: Page) {
 }
 
 export const spoken = (page: Page) => page.evaluate(() => (window as unknown as SpeechWindow).__spoken.slice());
+
+/** The language tag of each spoken text, in order (e.g. "he-IL", "ar"). */
+export const spokenLangs = (page: Page) =>
+  page.evaluate(() => (window as unknown as SpeechWindow).__spokenLangs.slice());
 
 export const stored = (page: Page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem('hebrew-practice') ?? 'null') as unknown) as Promise<Stored>;
