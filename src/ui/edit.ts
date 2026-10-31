@@ -6,6 +6,7 @@ import { APP_VERSION } from '../platform/version';
 import { NEWER_VERSION_MESSAGE } from '../platform/storage';
 import { importedTitles } from '../platform/import';
 import { PAIR_SECONDS } from '../platform/settings';
+import { LANGUAGES, type ForeignLang } from '../core/scripts';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
 import { confirmDialog, toast } from './dialog';
@@ -133,31 +134,53 @@ function pluginSection(app: App, plugin: AnyPlugin): Section {
     headSummary.textContent = expanded ? '' : isDirty() ? `${saved} · יש שינויים שלא נשמרו` : saved;
   }
 
+  let voiceRenders = 0;
   function renderVoiceList() {
     const data = app.getAssignment(plugin);
     voiceList.replaceChildren();
+    voiceRenders++;
     if (data === null) return;
     voiceList.appendChild(h('span', { class: 'voice-title' }, 'בדיקת הקראה — לחצו על מילה כדי לשמוע:'));
     const chips = h('div', { class: 'chips' });
+    const foreign = new Set<ForeignLang>();
     for (const item of plugin.speakItems(data)) {
+      const { text, lang } = typeof item === 'string' ? { text: item, lang: 'he' as const } : item;
+      if (lang !== 'he') foreign.add(lang);
+      const info = lang === 'he' ? null : LANGUAGES[lang];
       chips.appendChild(
         h(
           'button',
           {
             class: 'chip',
             type: 'button',
-            'aria-label': `השמעת ${item}`,
+            'aria-label': `השמעת ${text}`,
             onclick: () => {
               app.sounds.unlock();
-              void app.speaker.speak(item);
+              void app.speaker.speak(text, lang);
             },
           },
           icon(ICONS.speaker),
-          h('span', {}, item),
+          h('span', info ? { lang, dir: info.dir } : {}, text),
         ),
       );
     }
     voiceList.appendChild(chips);
+    // Only for the languages in this list: a phone without that voice shows the words silently.
+    const render = voiceRenders;
+    for (const lang of foreign) {
+      void app.speaker.canSpeak(lang).then((ok) => {
+        // A later save or clear redrew the list: this answer belongs to the old one.
+        if (ok || render !== voiceRenders) return;
+        const name = LANGUAGES[lang].name;
+        voiceList.appendChild(
+          h(
+            'p',
+            { class: 'msg warning', 'data-missing-voice': lang },
+            `אין קול ב${name} במכשיר הזה — המילים ב${name} יוצגו בלי קול. אפשר להוסיף קול ${name} בהגדרות ההקראה (טקסט לדיבור) של המכשיר.`,
+          ),
+        );
+      });
+    }
   }
 
   function update() {
