@@ -1555,8 +1555,9 @@ body:has(.screen.edit) {
   font-weight: 700;
 }
 
-/* The chosen direction: not only a color — a thicker dark border and the tiles' yellow. */
+/* The chosen direction: not only a color — a thicker dark border, a shadow and the tiles' yellow. */
 .flash-dir.on {
+  border-width: 4px;
   border-color: var(--ink);
   background: var(--tile);
   box-shadow: 0 4px 0 var(--ink);
@@ -1586,4 +1587,11 @@ body:has(.screen.edit) {
 
 .flash-dir .check-badge {
   --badge: 22px;
+}
+
+/* Missing-voice notes on the start screen: one tight block, so the crowded screen still fits 360×640. */
+.flash-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }

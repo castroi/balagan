@@ -52,7 +52,7 @@ export function mountFlashcards(
   // Both directions' rounds and the last direction played; the current direction's round is `progress`.
   let state: FlashState = readFlash(ctx.loadProgress(), keys);
   let progress: CardsProgress = activeRound(state, keys, defaultRng);
-  state = withRound(state, progress);
+  state = withRound(state, progress, keys, defaultRng);
   /** Saves both rounds and the direction, adding points in the same write. */
   const save = (points = 0) => ctx.commit(writeFlash(state, keys, defaultRng), points);
   save();
@@ -72,7 +72,12 @@ export function mountFlashcards(
       silent.add(lang);
       // The voice list can arrive seconds later: on the start screen only add the line, so the
       // Start button (and its focus, or a tap in progress) stays where it is.
-      if (phase === 'intro') root.querySelector('.stage.center')?.appendChild(noVoiceLine(lang));
+      if (phase === 'intro') {
+        const stage = root.querySelector('.stage.center');
+        stage?.querySelector('.flash-notes')?.remove();
+        const notes = voiceNotes();
+        if (notes) stage?.appendChild(notes);
+      }
       else if (foreignShown()) render();
     });
   }
@@ -125,7 +130,7 @@ export function mountFlashcards(
     if (phase !== 'back') return;
     const result = answer(progress, knew);
     progress = result.progress;
-    state = withRound(state, progress);
+    state = withRound(state, progress, keys, defaultRng);
     save(result.points);
     ctx.speaker.cancel();
     if (knew) ctx.sounds.play('correct');
@@ -149,7 +154,7 @@ export function mountFlashcards(
     cancelNextWord();
     ctx.sounds.unlock();
     progress = newCardsProgress(keys, defaultRng);
-    state = withRound(state, progress);
+    state = withRound(state, progress, keys, defaultRng);
     save();
     phase = 'front';
     render();
@@ -168,7 +173,7 @@ export function mountFlashcards(
     if (dir !== state.dir && !ctx.readOnly) {
       state = { ...state, dir };
       progress = activeRound(state, keys, defaultRng);
-      state = withRound(state, progress);
+      state = withRound(state, progress, keys, defaultRng);
       save();
       render();
       root.querySelector<HTMLElement>(`.flash-dir[data-dir="${dir}"]`)?.focus({ preventScroll: true });
@@ -314,9 +319,40 @@ export function mountFlashcards(
     });
     // The direction switch sits above the Start button; "התחלה" / "ממשיכים" belong to the chosen direction.
     view.prepend(directionSwitch());
-    // The kid may play on another phone than the one the words were typed on: say it here too.
-    for (const lang of silent) view.appendChild(noVoiceLine(lang));
+    const notes = voiceNotes();
+    if (notes) view.appendChild(notes);
     return view;
+  }
+
+  /**
+   * The kid may play on another phone than the one the words were typed on: missing voices are
+   * said on the start screen too, in one compact block (it must fit next to everything else).
+   */
+  function voiceNotes() {
+    if (silent.size === 0) return null;
+    const names = langs.filter((l) => silent.has(l)).map((l) => LANGUAGES[l].name);
+    const unreadable = unreadableNote();
+    return h(
+      'div',
+      { class: 'flash-notes' },
+      h('p', { class: 'muted flash-novoice' }, `אין קול ב${names.join(' וב')} במכשיר הזה`),
+      unreadable,
+    );
+  }
+
+  /**
+   * Foreign word first, on a phone without that voice: a card with no reading in Hebrew letters
+   * shows only the foreign script, silently — a young kid can't read it. Say so on the start screen.
+   */
+  function unreadableNote() {
+    if (!reverse()) return null;
+    const count = cards.filter((c) => c[2] === undefined && silent.has(cardLang(c))).length;
+    if (count === 0) return null;
+    return h(
+      'p',
+      { class: 'muted flash-novoice', 'data-unreadable': count },
+      count === 1 ? 'בכיוון הזה מילה אחת בלי קול ובלי קריאה בעברית' : `בכיוון הזה ${count} מילים בלי קול ובלי קריאה בעברית`,
+    );
   }
 
   /** Two buttons that work as a switch: a picture (א ← ? / ? ← א) before the short label, spoken when tapped. */
@@ -351,10 +387,6 @@ export function mountFlashcards(
         );
       }),
     );
-  }
-
-  function noVoiceLine(lang: ForeignLang) {
-    return h('p', { class: 'muted flash-novoice' }, `אין קול ב${LANGUAGES[lang].name} במכשיר הזה`);
   }
 
   function endView() {
@@ -398,10 +430,6 @@ export function mountFlashcards(
     root.replaceChildren(topBar());
     if (phase === 'intro') {
       root.appendChild(introView());
-      // The switch replaced the focused button: keep focus on the chosen direction.
-      if (hadFocus && active instanceof HTMLElement && active.classList.contains('flash-dir')) {
-        root.querySelector<HTMLElement>(`.flash-dir[data-dir="${state.dir}"]`)?.focus({ preventScroll: true });
-      }
       return;
     }
     if (phase === 'end') {

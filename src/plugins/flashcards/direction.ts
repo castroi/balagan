@@ -5,9 +5,10 @@
  * - 'to-hebrew': the foreign word on the front, the Hebrew on the back.
  *
  * Saved progress keeps the 'to-foreign' round at the top level, exactly as app 1.7 saved it,
- * so 1.7 still reads it. The other fields are extras that 1.7 ignores:
- * `dir` (the last direction played, so it comes back next time), `rev` (the 'to-hebrew'
- * round) and `finished` (directions with a finished round, for the ✓ on the switch).
+ * so 1.7 still reads it. The other fields are extras: `dir` (the last direction played, so it
+ * comes back next time), `rev` (the 'to-hebrew' round) and `finished` (directions with a
+ * finished round, for the ✓ on the switch). 1.7 keeps them while it continues a round, and
+ * drops them when it starts a new one (a known limit: no points are lost, only those extras).
  */
 import { fingerprint } from '../shared/letter-game/progress';
 import type { Rng } from '../../core/rng';
@@ -54,6 +55,7 @@ export function readFlash(saved: unknown, keys: readonly string[]): FlashState {
 
 /** The saved form. The top level always holds a 'to-foreign' round (a fresh one if there's none yet). */
 export function writeFlash(state: FlashState, keys: readonly string[], rng: Rng): SavedFlash {
+  // Callers keep a 'to-foreign' round in the state (see `withRound`), so this fallback is only for safety.
   const fwd = state.rounds['to-foreign'] ?? newCardsProgress(keys, rng);
   const rev = state.rounds['to-hebrew'];
   return {
@@ -71,7 +73,10 @@ export function activeRound(state: FlashState, keys: readonly string[], rng: Rng
 }
 
 /** The state with the current direction's round replaced; a finished round marks its direction ✓. */
-export function withRound(state: FlashState, round: CardsProgress): FlashState {
+export function withRound(state: FlashState, round: CardsProgress, keys: readonly string[], rng: Rng): FlashState {
   const finished = round.done && !state.finished.includes(state.dir) ? [...state.finished, state.dir] : state.finished;
-  return { ...state, rounds: { ...state.rounds, [state.dir]: round }, finished };
+  const rounds = { ...state.rounds, [state.dir]: round };
+  // The top-level ('to-foreign') round always exists, so saving twice writes the same thing.
+  if (!rounds['to-foreign']) rounds['to-foreign'] = newCardsProgress(keys, rng);
+  return { ...state, rounds, finished };
 }

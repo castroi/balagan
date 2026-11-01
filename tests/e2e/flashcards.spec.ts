@@ -217,7 +217,7 @@ test('after "ידעתי" the next word waits for the short sound', async ({ page
 });
 
 test.describe('direction switch', () => {
-  const dirButton = (page: Page, name: string) => page.locator('.flash-dirs').getByRole('button', { name });
+  const dirButton = (page: Page, name: string) => page.locator('.flash-dirs').getByRole('button', { name, exact: true });
 
   test('starts Hebrew first; the switch is spoken and remembered after closing the app', async ({ page }) => {
     await saveCards(page, 'דוד | خال');
@@ -287,7 +287,7 @@ test.describe('direction switch', () => {
     await page.getByRole('button', { name: 'חזרה לבית' }).last().click();
 
     await card(page).click();
-    await expect(dirButton(page, 'לעברית')).toHaveAttribute('aria-label', /הושלם$/);
+    await expect(page.locator('.flash-dir[data-dir="to-hebrew"]')).toHaveAttribute('aria-label', /הושלם$/);
     await expect(page.locator('.flash-dir[data-dir="to-hebrew"] .check-badge')).toBeVisible();
     // Back to Hebrew first: the round in progress continues from card 2.
     await dirButton(page, 'מעברית').click();
@@ -342,6 +342,24 @@ test.describe('a phone without an Arabic voice', () => {
     }
     throw new Error('the Arabic card was not shown');
   });
+
+  test('foreign word first: the start screen warns about cards with no voice and no reading; focus goes to the card', async ({
+    page,
+  }) => {
+    await saveCards(page, 'דוד | خال\nבן | ابن | אִבְּן');
+    await card(page).click();
+    await page.locator('.flash-dir[data-dir="to-hebrew"]').click();
+    await expect(page.locator('[data-unreadable]')).toHaveText('בכיוון הזה מילה אחת בלי קול ובלי קריאה בעברית');
+    // Hebrew first has no such problem: the note goes away.
+    await page.locator('.flash-dir[data-dir="to-foreign"]').click();
+    await expect(page.locator('[data-unreadable]')).toHaveCount(0);
+
+    await page.locator('.flash-dir[data-dir="to-hebrew"]').click();
+    await page.locator('.start-btn').click();
+    // The front is the foreign side with no voice: no speaker, so focus lands on the card.
+    await expect(page.locator('.speaker-btn')).toHaveCount(0);
+    await expect(flash(page)).toBeFocused();
+  });
 });
 
 test.describe('reduce motion', () => {
@@ -359,6 +377,22 @@ test.describe('reduce motion', () => {
 
 test.describe('small phone (360×640)', () => {
   test.use({ viewport: { width: 360, height: 640 } });
+
+  test('the start screen with the switch, restart and both voice notes fits without scrolling', async ({ page }) => {
+    await onlyVoices(page, ['he-IL']);
+    await saveCards(page, 'דוד | خال\nילד | child\nאבא | أب');
+    await card(page).click();
+    await page.locator('.flash-dir[data-dir="to-hebrew"]').click();
+    await page.locator('.start-btn').click();
+    await flash(page).click();
+    await knew(page).click();
+    await page.getByRole('button', { name: 'חזרה לבית' }).click();
+    await card(page).click();
+    await expect(page.getByRole('button', { name: 'מתחילים מהתחלה' })).toBeVisible();
+    await expect(page.locator('[data-unreadable]')).toBeVisible();
+    await expect(page.locator('.flash-novoice').first()).toHaveText('אין קול בערבית ובאנגלית במכשיר הזה');
+    expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(false);
+  });
 
   test('the back with the answer buttons and long text fits without scrolling', async ({ page }) => {
     await saveCards(page, 'בן (צאצא) של הדודה | ابن العمة الكبيرة | אִבְּן אִלְעַמֶּה אִלְכְּבִירֶה');
