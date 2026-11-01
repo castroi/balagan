@@ -55,8 +55,30 @@ test('data from a newer version: a message to refresh that stays, no cards, no p
   await expect(page.locator('.card')).toHaveCount(0);
   await expect(page.locator('.home-empty')).toHaveCount(0);
   await expect(page.locator('.points-chip')).toHaveCount(0);
-  // The message stays after the toast and after leaving and coming back.
+  await expect(page.locator('.greeting')).not.toContainText('עוד אין משימות השבוע');
+  // A screen reader hears it with the focused title.
+  await expect(page.locator('.title')).toHaveAttribute('aria-describedby', 'home-newer');
+  // The pencil stays: the edit screen shows the read-only banner (and the version).
   await page.getByRole('button', { name: 'עריכת משימות' }).click();
+  await expect(page.locator('.banner').filter({ hasText: 'גרסה חדשה יותר' })).toBeVisible();
+  // The message stays after the toast and after leaving and coming back.
   await page.getByRole('button', { name: 'חזרה' }).click();
   await expect(page.locator('.home-newer')).toBeVisible();
+});
+
+test('coming back to an empty home puts focus on the title', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.home-empty').getByRole('button', { name: 'למסך העריכה' }).click();
+  await page.getByRole('button', { name: 'חזרה' }).click();
+  await expect(page.locator('.title')).toBeFocused();
+});
+
+test.describe('small phone (360×640)', () => {
+  test.use({ viewport: { width: 360, height: 640 } });
+
+  test('the empty home fits without scrolling', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.home-empty')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight)).toBe(false);
+  });
 });

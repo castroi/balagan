@@ -46,11 +46,11 @@ export function renderHome(container: HTMLElement, app: App): void {
 
   // Saved by a newer version: the data looks empty but can't be changed, so don't ask the parent to add words.
   const readOnly = app.readOnly;
-  const subtitle = readOnly
-    ? HOME_NEWER_VERSION
-    : cards.length > 0
-      ? 'המשימות של השבוע'
-      : 'עוד אין משימות השבוע';
+  const subtitle = cards.length > 0 ? 'המשימות של השבוע' : 'עוד אין משימות השבוע';
+  // The same warning look as the edit screen's banner (icon + text, not colour alone); it stays, unlike the toast.
+  const newerBanner = readOnly
+    ? h('div', { class: 'banner home-newer', id: 'home-newer' }, icon(ICONS.alert), h('span', {}, HOME_NEWER_VERSION))
+    : null;
 
   const emptyState =
     cards.length === 0 && !readOnly
@@ -76,7 +76,7 @@ export function renderHome(container: HTMLElement, app: App): void {
         { class: 'topbar' },
         // Points are blocked in read-only mode (not even in memory): no chip then.
         readOnly
-          ? h('span', {})
+          ? h('span', { 'aria-hidden': 'true' })
           : h('div', { class: 'points-chip' }, icon(ICONS.star, 'icon star'), h('span', {}, String(app.data.points))),
         h(
           'button',
@@ -87,9 +87,11 @@ export function renderHome(container: HTMLElement, app: App): void {
       h(
         'div',
         { class: 'greeting' },
-        h('h1', { class: 'title' }, 'שלום!'),
-        h('p', { class: `muted big${readOnly ? ' home-newer' : ''}` }, subtitle),
+        // Focus lands on the title after a screen change: in read-only mode it also reads the warning.
+        h('h1', { class: 'title', ...(readOnly ? { 'aria-describedby': 'home-newer' } : {}) }, 'שלום!'),
+        readOnly ? null : h('p', { class: 'muted big' }, subtitle),
       ),
+      newerBanner,
       cards.length > 0 ? h('div', { class: 'cards' }, ...cards) : emptyState,
     ),
   );
