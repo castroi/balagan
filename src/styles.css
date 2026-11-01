@@ -1520,3 +1520,78 @@ body:has(.screen.edit) {
 .mini-word:lang(en) {
   font-family: var(--ui-font);
 }
+
+/* The foreign side shown small on top of the back (the reverse direction) keeps its own font. */
+.flash-top:lang(ar) {
+  font-family: var(--arabic-font);
+}
+
+.flash-top:lang(en) {
+  font-family: var(--ui-font);
+}
+
+/* Direction switch above the Start button: two 64px buttons, a picture before the label. */
+.flash-dirs {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.flash-dir {
+  --slot: 52px;
+  position: relative;
+  min-height: 64px;
+  padding: 8px;
+  border-radius: 18px;
+  border: 3px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* The chosen direction: not only a color — a thicker dark border, a shadow and the tiles' yellow. */
+.flash-dir.on {
+  border-width: 4px;
+  border-color: var(--ink);
+  background: var(--tile);
+  box-shadow: 0 4px 0 var(--ink);
+}
+
+.flash-dir:disabled {
+  opacity: 0.6;
+}
+
+.flash-dir-pic {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flash-dir .mini-tile {
+  width: 32px;
+  height: 36px;
+  font-size: 20px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.flash-dir-arrow {
+  font-size: 20px;
+}
+
+.flash-dir .check-badge {
+  --badge: 22px;
+}
+
+/* Missing-voice notes on the start screen: one tight block, so the crowded screen still fits 360×640. */
+.flash-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

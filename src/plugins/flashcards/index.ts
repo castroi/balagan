@@ -10,7 +10,8 @@ import {
   toText,
   type FlashcardsData,
 } from './parse';
-import { isValidCardsProgress, roundLength } from './round';
+import { roundLength } from './round';
+import { readFlash } from './direction';
 import { previewFlashcards } from './preview';
 import { mountFlashcards } from './view';
 
@@ -38,12 +39,13 @@ export const flashcards: AssignmentPlugin<FlashcardsData> = {
   speakItems: (data) => data.cards.map((card) => ({ text: card[1], lang: cardLang(card) })),
   summary(data, progress) {
     const total = data.cards.length;
-    if (!isValidCardsProgress(progress, keys(data))) {
-      return { line: `${wordCountLabel(total)} · ${doneLabel(0)}`, fraction: 0 };
-    }
+    // The round of the direction played last.
+    const state = readFlash(progress, keys(data));
+    const round = state.rounds[state.dir];
+    if (!round) return { line: `${wordCountLabel(total)} · ${doneLabel(0)}`, fraction: 0 };
     // The bar counts the repeated cards too, so it isn't full while they are still coming.
-    const done = Math.min(progress.index, total);
-    return { line: `${wordCountLabel(total)} · ${doneLabel(done)}`, fraction: progress.index / roundLength(progress) };
+    const done = Math.min(round.index, total);
+    return { line: `${wordCountLabel(total)} · ${doneLabel(done)}`, fraction: round.index / roundLength(round) };
   },
   preview: previewFlashcards,
   mount: (container, data, ctx) => mountFlashcards(container, data.cards, keys(data), ctx),

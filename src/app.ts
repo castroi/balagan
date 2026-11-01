@@ -151,6 +151,7 @@ export class App {
         sounds: this.sounds,
         totalPoints: () => this.data.points,
         pairMs: this.settings.pairSeconds * 1000,
+        readOnly: this.readOnly,
         loadProgress: () => this.data.progress[plugin.id],
         commit: (progress, pointsToAdd = 0) => {
           if (this.readOnly) return;

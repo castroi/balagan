@@ -18,6 +18,8 @@ export interface GameContext {
   totalPoints(): number;
   /** How long the popup after a word stays when it shows a right/wrong pair (device setting). */
   pairMs: number;
+  /** Saved data is from a newer app version: nothing is saved, so choices the game remembers can't change. */
+  readOnly: boolean;
   loadProgress(): unknown;
   /** Saves progress and adds points in one write, so points are never counted twice. */
   commit(progress: unknown, pointsToAdd?: number): void;
