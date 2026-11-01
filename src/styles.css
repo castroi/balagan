@@ -225,10 +225,12 @@ h1[tabindex='-1']:focus {
   box-shadow: 0 3px 0 var(--ink);
 }
 
-.card-empty {
-  box-shadow: none;
-  border-style: dashed;
-  border-color: var(--line);
+/* Home with no activity yet: a line for the parents and one plain button to the edit screen (not a game card). */
+.home-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .card-tiles {

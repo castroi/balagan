@@ -9,6 +9,8 @@ Assignment types:
 - **Choose Word** (בחרו את המילה): the word is spoken and the kid taps the correct spelling among 2–4 words. The parent writes the correct word first, then 1–3 wrong spellings, e.g. `כַּעַס קַעַס כַּאַס קַאַס`.
 - **How do you say?** (איך אומרים?): flashcards for words in another language. The card shows a Hebrew word; a tap turns it over to the word in Arabic or English, spoken by that language's device voice. Then the kid answers "ידעתי" or "עוד לא"; "עוד לא" cards come back at the end. A switch on the start screen turns the cards around: the foreign word first, and the kid says what it means in Hebrew. Each line: Hebrew `|` the word in its own letters `|` how to read it in Hebrew letters (optional), e.g. `דוד | خَال | חַ׳אל` or `ילד | child`.
 
+The home screen shows only the activities that have content this week; new activities appear on the edit screen.
+
 On the edit screen, **הגדרות** sets how long the popup after a word stays when it shows a right/wrong pair — a letter pair in Confusing Letters or a word pair in Choose Word (1.5–8 seconds, default 3). Every other popup keeps its normal length. It's saved on that device only.
 
 ## Run it on your computer

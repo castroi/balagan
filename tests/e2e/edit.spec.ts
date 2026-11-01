@@ -91,7 +91,7 @@ test.describe('Clear and Undo', () => {
 test.describe('loading from a link', () => {
   test('a link opened while the app is already open loads the words', async ({ page, baseURL }) => {
     await page.goto('/');
-    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('עדיין אין תוכן');
+    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toHaveCount(0);
     // Only the hash changes — the page is not reloaded.
     await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, WORDS)).hash);
     await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('3 מילים');
@@ -169,13 +169,14 @@ test.describe('data saved by a newer version of the app', () => {
     // Not even in memory: home still has nothing to play.
     await page.getByRole('button', { name: 'חזרה' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'לצאת' }).click();
-    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('עדיין אין תוכן');
+    await expect(page.locator('.home-newer')).toBeVisible();
+    await expect(page.locator('.card')).toHaveCount(0);
   });
 
   test('a share link is refused and nothing changes', async ({ page, baseURL }) => {
     await page.evaluate((hash) => (location.hash = hash), new URL(linkFor(baseURL!, WORDS)).hash);
     await expect(page.locator('.toast')).toContainText('גרסה חדשה יותר');
-    await expect(page.locator('.card[data-plugin="scrambled-words"]')).toContainText('עדיין אין תוכן');
+    await expect(page.locator('.card')).toHaveCount(0);
     expect(await stored(page)).toBe(newer);
   });
 
