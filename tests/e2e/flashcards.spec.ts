@@ -216,6 +216,104 @@ test('after "ידעתי" the next word waits for the short sound', async ({ page
   await expect.poll(async () => (await spoken(page)).length).toBe(3);
 });
 
+test.describe('direction switch', () => {
+  const dirButton = (page: Page, name: string) => page.locator('.flash-dirs').getByRole('button', { name });
+
+  test('starts Hebrew first; the switch is spoken and remembered after closing the app', async ({ page }) => {
+    await saveCards(page, 'דוד | خال');
+    await card(page).click();
+    await expect(dirButton(page, 'מעברית לערבית')).toHaveAttribute('aria-pressed', 'true');
+    await expect(dirButton(page, 'מערבית לעברית')).toHaveAttribute('aria-pressed', 'false');
+    for (const b of await page.locator('.flash-dir').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(64);
+
+    await dirButton(page, 'מערבית לעברית').click();
+    await expect(dirButton(page, 'מערבית לעברית')).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => spoken(page)).toEqual(['מערבית לעברית']);
+
+    await page.reload();
+    await card(page).click();
+    await expect(dirButton(page, 'מערבית לעברית')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('foreign word first: the reading, spoken in Arabic; turned over to the Hebrew, spoken in Hebrew', async ({ page }) => {
+    await saveCards(page, 'בן (צאצא) | ابن | אִבְּן');
+    await card(page).click();
+    await dirButton(page, 'מערבית לעברית').click();
+    await page.locator('.start-btn').click();
+    await expect(flash(page).locator('.flash-main')).toHaveText(n('אִבְּן'));
+    await expect(flash(page)).toContainText('מה זה בעברית?');
+    // The Hebrew answer isn't on the front.
+    await expect(flash(page)).not.toContainText('בן');
+    await expect.poll(async () => (await spoken(page)).at(-1)).toBe('ابن');
+    expect((await spokenLangs(page)).at(-1)).toBe('ar');
+
+    await flash(page).click();
+    await expect(flash(page).locator('.flash-main')).toHaveText('בן');
+    await expect(flash(page).locator('.flash-hint')).toHaveText('צאצא');
+    await expect(flash(page).locator('.flash-top')).toHaveText(n('אִבְּן'));
+    await expect.poll(async () => (await spoken(page)).at(-1)).toBe('בן');
+
+    await knew(page).click();
+    await expect(page.locator('.end')).toContainText('5 נקודות');
+  });
+
+  test('English first with a reading: the reading big, the spelling small under it', async ({ page }) => {
+    await saveCards(page, "מעניין | interesting | אִינְטֶרֶסְטִינְג");
+    await card(page).click();
+    await dirButton(page, 'מאנגלית לעברית').click();
+    await page.locator('.start-btn').click();
+    await expect(flash(page).locator('.flash-main')).toHaveText(n('אִינְטֶרֶסְטִינְג'));
+    await expect(flash(page).locator('.flash-sub')).toHaveText('interesting');
+    await expect(flash(page).locator('.flash-sub')).toHaveAttribute('dir', 'ltr');
+  });
+
+  test('each direction keeps its own round; a finished one gets a ✓', async ({ page }) => {
+    await saveCards(page, 'דוד | خال\nילד | child');
+    await start(page);
+    await flash(page).click();
+    await knew(page).click();
+    await page.getByRole('button', { name: 'חזרה לבית' }).click();
+
+    // The other direction: its own round, from the start; finish it.
+    await card(page).click();
+    await dirButton(page, 'לעברית').click();
+    await expect(page.locator('.start-btn')).toContainText('התחלה');
+    await page.locator('.start-btn').click();
+    for (let i = 0; i < 2; i++) {
+      await flash(page).click();
+      await knew(page).click();
+    }
+    await expect(page.locator('.end')).toBeVisible();
+    await page.getByRole('button', { name: 'חזרה לבית' }).last().click();
+
+    await card(page).click();
+    await expect(dirButton(page, 'לעברית')).toHaveAttribute('aria-label', /הושלם$/);
+    await expect(page.locator('.flash-dir[data-dir="to-hebrew"] .check-badge')).toBeVisible();
+    // Back to Hebrew first: the round in progress continues from card 2.
+    await dirButton(page, 'מעברית').click();
+    await expect(page.locator('.start-btn')).toContainText('ממשיכים');
+    await expect(page.locator('.stage.center')).toContainText('מילה 2 מתוך 2');
+    const s = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), KEY);
+    expect(s.points).toBe(15);
+  });
+
+  test('progress saved by app 1.7 keeps working (Hebrew first)', async ({ page }) => {
+    await saveCards(page, 'דוד | خال\nילד | child');
+    // 1.7 saved only the round at the top level.
+    await page.evaluate((key) => {
+      const s = JSON.parse(localStorage.getItem(key)!);
+      s.progress.flashcards = { fp: 'דוד | خال\nילד | child', order: [1, 0], again: [], index: 1, roundPoints: 5, done: false };
+      localStorage.setItem(key, JSON.stringify(s));
+    }, KEY);
+    await page.reload();
+    await card(page).click();
+    await expect(page.locator('.flash-dir[data-dir="to-foreign"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.start-btn')).toContainText('ממשיכים');
+    await page.locator('.start-btn').click();
+    await expect(flash(page).locator('.flash-main')).toHaveText('דוד');
+  });
+});
+
 test.describe('a phone without an Arabic voice', () => {
   test.beforeEach(async ({ page }) => {
     await onlyVoices(page, ['he-IL', 'en-US']);

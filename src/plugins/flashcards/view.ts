@@ -1,7 +1,8 @@
 /**
- * The "איך אומרים?" game screen: a card shows a Hebrew word (spoken in Hebrew);
- * tapping it turns it over to the word in the other language (spoken in that
- * language); then the kid answers "ידעתי" or "עוד לא".
+ * The "איך אומרים?" game screen: a card shows one side (spoken); tapping it turns
+ * it over to the other side (spoken in its language); then the kid answers
+ * "ידעתי" or "עוד לא". The start screen switches the direction: Hebrew first
+ * (the default) or the foreign word first.
  */
 import { h, icon } from '../../ui/dom';
 import { ICONS } from '../../ui/icons';
@@ -13,14 +14,8 @@ import { startScreen } from '../shared/start-screen';
 import { MAX_DOTS } from '../shared/letter-game/view';
 import { wordCountLabel } from '../shared/letter-game/text';
 import { cardLang, frontParts, type Card } from './parse';
-import {
-  answer,
-  currentCard,
-  isValidCardsProgress,
-  newCardsProgress,
-  roundLength,
-  type CardsProgress,
-} from './round';
+import { answer, currentCard, newCardsProgress, roundLength, type CardsProgress } from './round';
+import { activeRound, DIRECTIONS, readFlash, withRound, writeFlash, type Direction, type FlashState } from './direction';
 
 type Phase = 'intro' | 'front' | 'back' | 'end';
 
@@ -54,11 +49,19 @@ export function mountFlashcards(
   /** Languages the device can't speak: their cards are shown silently, with no speaker button. */
   const silent = new Set<ForeignLang>();
 
-  const saved = ctx.loadProgress();
-  let progress: CardsProgress =
-    isValidCardsProgress(saved, keys) && !saved.done ? saved : newCardsProgress(keys, defaultRng);
-  if (progress !== saved) ctx.commit(progress);
+  // Both directions' rounds and the last direction played; the current direction's round is `progress`.
+  let state: FlashState = readFlash(ctx.loadProgress(), keys);
+  let progress: CardsProgress = activeRound(state, keys, defaultRng);
+  state = withRound(state, progress);
+  /** Saves both rounds and the direction, adding points in the same write. */
+  const save = (points = 0) => ctx.commit(writeFlash(state, keys, defaultRng), points);
+  save();
   let phase: Phase = 'intro';
+
+  const reverse = () => state.dir === 'to-hebrew';
+  /** True when the side on screen is the foreign word (spoken by the foreign voice). */
+  const foreignShown = () => (phase === 'front' && reverse()) || (phase === 'back' && !reverse());
+  const langs = [...new Set(cards.map(cardLang))];
 
   const root = h('div', { class: 'screen game compact flash' });
   container.appendChild(root);
@@ -70,7 +73,7 @@ export function mountFlashcards(
       // The voice list can arrive seconds later: on the start screen only add the line, so the
       // Start button (and its focus, or a tap in progress) stays where it is.
       if (phase === 'intro') root.querySelector('.stage.center')?.appendChild(noVoiceLine(lang));
-      else if (phase === 'back') render();
+      else if (foreignShown()) render();
     });
   }
 
@@ -86,15 +89,17 @@ export function mountFlashcards(
   // ---------- actions ----------
 
   function speakSide() {
+    if (phase !== 'front' && phase !== 'back') return;
     const c = card();
-    if (phase === 'front') {
-      void ctx.speaker.speak(hebrewSpeech(frontParts(c[0]).main));
-    } else if (phase === 'back' && !silent.has(cardLang(c))) {
-      void ctx.speaker.speak(c[1], cardLang(c));
-    }
+    if (!foreignShown()) void ctx.speaker.speak(hebrewSpeech(frontParts(c[0]).main));
+    else if (!silent.has(cardLang(c))) void ctx.speaker.speak(c[1], cardLang(c));
   }
 
-  const focusSpeaker = () => root.querySelector<HTMLElement>('.speaker-btn')?.focus({ preventScroll: true });
+  /** The speaker, or the card when this side has no voice (no speaker button). */
+  const focusSpeaker = () =>
+    (root.querySelector<HTMLElement>('.speaker-btn') ?? root.querySelector<HTMLElement>('.flash-card'))?.focus({
+      preventScroll: true,
+    });
 
   function start() {
     ctx.sounds.unlock();
@@ -120,7 +125,8 @@ export function mountFlashcards(
     if (phase !== 'back') return;
     const result = answer(progress, knew);
     progress = result.progress;
-    ctx.commit(progress, result.points);
+    state = withRound(state, progress);
+    save(result.points);
     ctx.speaker.cancel();
     if (knew) ctx.sounds.play('correct');
     if (progress.done) {
@@ -143,7 +149,8 @@ export function mountFlashcards(
     cancelNextWord();
     ctx.sounds.unlock();
     progress = newCardsProgress(keys, defaultRng);
-    ctx.commit(progress);
+    state = withRound(state, progress);
+    save();
     phase = 'front';
     render();
     focusSpeaker();
@@ -153,6 +160,27 @@ export function mountFlashcards(
   function restart() {
     announce('מתחילים מהתחלה');
     playAgain();
+  }
+
+  /** The start screen's switch: each direction keeps its own round; the choice is saved for next time. */
+  function setDirection(dir: Direction) {
+    ctx.sounds.unlock();
+    if (dir !== state.dir && !ctx.readOnly) {
+      state = { ...state, dir };
+      progress = activeRound(state, keys, defaultRng);
+      state = withRound(state, progress);
+      save();
+      render();
+      root.querySelector<HTMLElement>(`.flash-dir[data-dir="${dir}"]`)?.focus({ preventScroll: true });
+    }
+    void ctx.speaker.speak(directionSpeech(dir));
+  }
+
+  /** "מעברית לערבית" / "מערבית לעברית"; with mixed languages just "מעברית" / "לעברית". */
+  function directionSpeech(dir: Direction) {
+    const name = langs.length === 1 ? LANGUAGES[langs[0]].name : null;
+    if (dir === 'to-foreign') return name ? `מעברית ל${name}` : 'מעברית';
+    return name ? `מ${name} לעברית` : 'לעברית';
   }
 
   // ---------- rendering ----------
@@ -189,7 +217,7 @@ export function mountFlashcards(
 
   function speakerButton() {
     // No voice for this language on the device: no button that does nothing.
-    const hidden = phase === 'back' && silent.has(cardLang(card()));
+    const hidden = foreignShown() && silent.has(cardLang(card()));
     return h(
       'div',
       { class: 'speaker-wrap' },
@@ -209,31 +237,47 @@ export function mountFlashcards(
     const lang = cardLang(card());
     const { main, hint } = frontParts(he);
     const langName = LANGUAGES[lang].name;
+    // The foreign side as the kid sees it: the reading in Hebrew letters when given, else the word itself.
+    const shown = read ?? word;
+    const shownLang = read === undefined ? lang : 'he';
+    // English under its Hebrew-letter reading: older kids see the spelling. Arabic script isn't shown then.
+    const spelling = read !== undefined && lang === 'en' ? sideText(word, 'flash-sub', 'en') : null;
+    const canHear = !silent.has(lang) || !foreignShown();
     if (phase === 'front') {
+      const prompt = reverse() ? 'מה זה בעברית?' : `איך אומרים ב${langName}?`;
       return h(
         'button',
         {
           class: 'flash-card',
           type: 'button',
-          'aria-label': `${main}${hint ? ` (${hint})` : ''}. איך אומרים ב${langName}? לחצו כדי להפוך`,
+          'aria-label': reverse()
+            ? `${shown}. ${prompt} לחצו כדי להפוך`
+            : `${main}${hint ? ` (${hint})` : ''}. ${prompt} לחצו כדי להפוך`,
         },
-        sideText(main, 'flash-main', 'he'),
-        hint ? sideText(hint, 'flash-hint', 'he') : null,
-        h('span', { class: 'flash-lang' }, `איך אומרים ב${langName}?`),
+        ...(reverse()
+          ? [sideText(shown, 'flash-main', shownLang), spelling]
+          : [sideText(main, 'flash-main', 'he'), hint ? sideText(hint, 'flash-hint', 'he') : null]),
+        h('span', { class: 'flash-lang' }, prompt),
       );
     }
-    const shown = read ?? word;
+    const again = canHear ? '. לחצו כדי לשמוע שוב' : '';
     const btn = h(
       'button',
       {
         class: `flash-card back${justTurned ? ' turn' : ''}`,
         type: 'button',
-        'aria-label': `${shown}. ${main} ב${langName}${silent.has(lang) ? '' : '. לחצו כדי לשמוע שוב'}`,
+        'aria-label': reverse()
+          ? `${main}${hint ? ` (${hint})` : ''}. ${shown} בעברית${again}`
+          : `${shown}. ${main} ב${langName}${again}`,
       },
-      sideText(main, 'flash-top', 'he'),
-      sideText(shown, 'flash-main', read === undefined ? lang : 'he'),
-      // English under its Hebrew-letter reading: older kids see the spelling. Arabic script isn't shown then.
-      read !== undefined && lang === 'en' ? sideText(word, 'flash-sub', 'en') : null,
+      // The side the kid started from stays small on top, so the pair is seen together.
+      ...(reverse()
+        ? [
+            sideText(shown, 'flash-top', shownLang),
+            sideText(main, 'flash-main', 'he'),
+            hint ? sideText(hint, 'flash-hint', 'he') : null,
+          ]
+        : [sideText(main, 'flash-top', 'he'), sideText(shown, 'flash-main', shownLang), spelling]),
     );
     justTurned = false;
     return btn;
@@ -268,9 +312,45 @@ export function mountFlashcards(
       onStart: start,
       onRestart: restart,
     });
+    // The direction switch sits above the Start button; "התחלה" / "ממשיכים" belong to the chosen direction.
+    view.prepend(directionSwitch());
     // The kid may play on another phone than the one the words were typed on: say it here too.
     for (const lang of silent) view.appendChild(noVoiceLine(lang));
     return view;
+  }
+
+  /** Two buttons that work as a switch: a picture (א ← ? / ? ← א) before the short label, spoken when tapped. */
+  function directionSwitch() {
+    return h(
+      'div',
+      { class: 'flash-dirs', role: 'group', 'aria-label': 'כיוון' },
+      ...DIRECTIONS.map((dir) => {
+        const done = state.finished.includes(dir);
+        const pressed = dir === state.dir;
+        const tiles = dir === 'to-foreign' ? ['א', '?'] : ['?', 'א'];
+        return h(
+          'button',
+          {
+            class: `flash-dir${pressed ? ' on' : ''}`,
+            type: 'button',
+            'data-dir': dir,
+            'aria-pressed': String(pressed),
+            'aria-label': `${directionSpeech(dir)}${done ? ', הושלם' : ''}`,
+            disabled: ctx.readOnly && !pressed,
+            onclick: () => setDirection(dir),
+          },
+          h(
+            'span',
+            { class: 'flash-dir-pic', 'aria-hidden': 'true' },
+            h('span', { class: 'mini-tile' }, tiles[0]),
+            h('span', { class: 'flash-dir-arrow' }, '←'),
+            h('span', { class: 'mini-tile' }, tiles[1]),
+          ),
+          h('span', { class: 'flash-dir-label' }, dir === 'to-foreign' ? 'מעברית' : 'לעברית'),
+          done ? h('span', { class: 'check-badge' }, icon(ICONS.check)) : null,
+        );
+      }),
+    );
   }
 
   function noVoiceLine(lang: ForeignLang) {
@@ -318,6 +398,10 @@ export function mountFlashcards(
     root.replaceChildren(topBar());
     if (phase === 'intro') {
       root.appendChild(introView());
+      // The switch replaced the focused button: keep focus on the chosen direction.
+      if (hadFocus && active instanceof HTMLElement && active.classList.contains('flash-dir')) {
+        root.querySelector<HTMLElement>(`.flash-dir[data-dir="${state.dir}"]`)?.focus({ preventScroll: true });
+      }
       return;
     }
     if (phase === 'end') {
