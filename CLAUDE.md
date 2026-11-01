@@ -43,7 +43,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Touch targets at least 44px; letter tiles bigger | Kids' fingers are less precise (Apple's minimum is 44pt) |
 | Icons and voice before text | Younger kids may not read well yet |
 | Every game starts with a Start button | iPhone allows sound and speech only after a tap |
-| Every game uses the shared start screen (`startScreen` in `src/plugins/shared/start-screen.ts`): a round in progress shows "ממשיכים" and, under it, a smaller outlined "↻ מתחילים מהתחלה" (only when resuming, from word 2). Restart does what "לשחק שוב" does — new random order, round points 0, the total kept — with no confirmation and no undo, then focus goes to the speaker. No restart (or skip) button during play | Kids sometimes want a fresh start; having to leave and come back keeps it from becoming an escape from hard words; losing a round is small and shows at once |
+| Every game uses the shared start screen (`startScreen` in `src/plugins/shared/start-screen.ts`): a round in progress shows "ממשיכים" and, under it, a smaller outlined "↻ מתחילים מהתחלה" (only when resuming, from word 2). Restart does what "לשחק שוב" does — new random order, round points 0, the total kept — with no confirmation and no undo, then focus goes to the speaker. No restart (or skip) button during play. A game may put one control above the Start button (e.g. the direction switch in "איך אומרים?"); the buttons below always belong to it | Kids sometimes want a fresh start; having to leave and come back keeps it from becoming an escape from hard words; losing a round is small and shows at once |
 | Mistakes: orange + shake + soft sound, never red | A nudge, not a failure |
 | Correct: green + ✓ icon + short sound | Color is never the only signal (color-blind kids) |
 | No decoration that does nothing; no "coming soon" items | Distracts and frustrates kids |
@@ -157,7 +157,7 @@ A different kind of game (not letter tiles): its own pure logic (`round.ts`) and
 
 ## How do you say? (איך אומרים?) — decisions
 
-Flashcards for words in another language. A different kind of game: its own pure logic (`round.ts`, with its own progress that adds the repeated cards) and view, reusing `progress.ts` (order and fingerprint), `text.ts`, sounds, speech and the start screen.
+Flashcards for words in another language, in two directions. A different kind of game: its own pure logic (`round.ts`, with its own progress that adds the repeated cards) and view, reusing `progress.ts` (order and fingerprint), `text.ts`, sounds, speech and the start screen.
 
 | Rule | Why |
 |---|---|
@@ -173,7 +173,13 @@ Flashcards for words in another language. A different kind of game: its own pure
 | No voice for the language on this device: no speaker button on the back and a line on the start screen | The kid often plays on another phone than the one the words were typed on |
 | Saved progress is keyed by the full lines | Changing a card starts a fresh round |
 | Progress dots only when every card repeated would still fit (5 cards or fewer, `order.length × 2 ≤ MAX_DOTS`), else the "4 / 20" counter; the home bar counts the repeated cards | The indicator never switches in the middle of a round; the bar is full only when the round is |
-| After "ידעתי" the next Hebrew word waits 0.45 s (`NEXT_WORD_PAUSE_MS`) | The "correct" sound and the word don't play over each other |
+| After "ידעתי" the next word waits 0.45 s (`NEXT_WORD_PAUSE_MS`) | The "correct" sound and the word don't play over each other |
+| Two directions, switched by the kid above the Start button (`direction.ts`): "מעברית" (א ← ?, the default: Hebrew first) and "לעברית" (? ← א: the foreign word first). Two 64px buttons with `aria-pressed`, a picture before the label; a tap says it ("מעברית לערבית"; with mixed languages just "מעברית" / "לעברית") | One word list, typed once, practised both ways; the parent doesn't choose, since a device setting wouldn't reach the kid's phone and a data field would need a `dataVersion` bump |
+| The last direction played is remembered on the device (with the progress, never in the share link); each direction keeps its own round; read-only mode disables the switch | The kid continues where they stopped; switching never throws away the other round |
+| Saved progress keeps the "מעברית" round at the top level exactly as 1.7 saved it; `dir`, `rev` (the "לעברית" round) and `finished` are extra fields 1.7 ignores | Saved progress keeps working in both versions |
+| "לעברית": front = the foreign side as the "מעברית" back shows it (reading big, English spelling small, Arabic script never with a reading), spoken in the foreign language, with "מה זה בעברית?"; back = the Hebrew big, spoken in Hebrew, its note small and not spoken, the foreign side small on top | Hearing the foreign word is the task; the pair is seen together |
+| Both directions give the same points (5 per first-pass card), so playing both earns twice | Twice the work, like "לשחק שוב"; nothing rewards the easier direction (recognising, "לעברית") |
+| A ✓ on a direction's switch once a round in it is finished (for these cards) | A quiet hint to try the other direction |
 
 ## Not done on purpose (possible later)
 
