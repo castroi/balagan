@@ -1,0 +1,62 @@
+import { test, expect } from '@playwright/test';
+
+const KEY = 'hebrew-practice';
+
+async function save(page: import('@playwright/test').Page, id: string, text: string) {
+  await page.getByRole('button', { name: 'עריכת משימות' }).click();
+  await page.locator(`#input-${id}`).fill(text);
+  await page.locator(`section[data-plugin="${id}"]`).getByRole('button', { name: 'שמירה' }).click();
+  await page.getByRole('button', { name: 'חזרה' }).click();
+}
+
+test('no content yet: no cards, a line for the parents and one button to the edit screen', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.title')).toHaveText('שלום!');
+  await expect(page.locator('.title')).toBeFocused();
+  await expect(page.locator('.greeting')).toContainText('עוד אין משימות השבוע');
+  await expect(page.locator('.card')).toHaveCount(0);
+  await expect(page.locator('.home-empty')).toContainText('הורים: הוסיפו מילים או הדביקו קישור במסך העריכה');
+  const toEdit = page.locator('.home-empty').getByRole('button', { name: 'למסך העריכה' });
+  expect((await toEdit.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await toEdit.click();
+  await expect(page.locator('.edit-title')).toHaveText('עריכת משימות');
+});
+
+test('only activities with content are shown, in their usual order', async ({ page }) => {
+  await page.goto('/');
+  await save(page, 'flashcards', 'דוד | خال');
+  await expect(page.locator('.card')).toHaveCount(1);
+  await expect(page.locator('.card[data-plugin="flashcards"]')).toBeVisible();
+  await expect(page.locator('.greeting')).toContainText('המשימות של השבוע');
+  await expect(page.locator('.home-empty')).toHaveCount(0);
+
+  await save(page, 'scrambled-words', 'כַּעַס\nעָצוּב');
+  await expect(page.locator('.card')).toHaveCount(2);
+  const order = await page.locator('.card').evaluateAll((els) => els.map((e) => e.getAttribute('data-plugin')));
+  expect(order).toEqual(['scrambled-words', 'flashcards']);
+});
+
+test('clearing the last activity brings back the empty home', async ({ page }) => {
+  await page.goto('/');
+  await save(page, 'scrambled-words', 'כַּעַס');
+  await page.getByRole('button', { name: 'עריכת משימות' }).click();
+  await page.locator('section[data-plugin="scrambled-words"]').getByRole('button', { name: 'ניקוי' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'מחיקה' }).click();
+  await page.getByRole('button', { name: 'חזרה' }).click();
+  await expect(page.locator('.card')).toHaveCount(0);
+  await expect(page.locator('.greeting')).toContainText('עוד אין משימות השבוע');
+});
+
+test('data from a newer version: a message to refresh that stays, no cards, no points, no add-words line', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate((key) => localStorage.setItem(key, JSON.stringify({ schema: 99 })), KEY);
+  await page.reload();
+  await expect(page.locator('.home-newer')).toHaveText('יש גרסה חדשה של האפליקציה. רעננו את הדף');
+  await expect(page.locator('.card')).toHaveCount(0);
+  await expect(page.locator('.home-empty')).toHaveCount(0);
+  await expect(page.locator('.points-chip')).toHaveCount(0);
+  // The message stays after the toast and after leaving and coming back.
+  await page.getByRole('button', { name: 'עריכת משימות' }).click();
+  await page.getByRole('button', { name: 'חזרה' }).click();
+  await expect(page.locator('.home-newer')).toBeVisible();
+});
