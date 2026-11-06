@@ -108,7 +108,15 @@ for (const game of GAMES) {
       expect(box.width).toBeGreaterThanOrEqual(220);
       expect(box.y - (start.y + start.height)).toBeGreaterThanOrEqual(24);
 
+      // The word the kid is on must not open the new round. Fix the random numbers so a
+      // plain shuffle of 3 items would put exactly that word first (r < 1/3 → item 1,
+      // 1/3–1/2 → item 2, 1/2–2/3 → item 0), so the test fails every time without the fix.
+      const before = (await savedRound(page, game.id)).progress;
+      const stuck = before.order[before.index];
+      await page.evaluate((r) => (Math.random = () => r), [0.6, 0.1, 0.4][stuck]);
+
       await restart.click();
+      expect((await savedRound(page, game.id)).progress.order[0]).not.toBe(stuck);
       // Straight into word 1 of a new round; the total is kept.
       await expect(page.locator('.start-btn')).toHaveCount(0);
       await expect(page.locator('.speaker-btn')).toBeVisible();

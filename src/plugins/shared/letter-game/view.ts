@@ -9,7 +9,7 @@ import { defaultRng } from '../../../core/rng';
 import { pointsForMistakes } from '../../../core/scoring';
 import type { GameContext } from '../../types';
 import { startScreen } from '../start-screen';
-import { completeWord, isValidProgress, newProgress, type RoundProgress } from './progress';
+import { completeWord, isValidProgress, lastPlayed, newProgress, type RoundProgress } from './progress';
 import { createRound, nextSlot, placeTile, type WordRound } from './round';
 
 /** One word to play, with any extra (confusing) letters mixed into its tray. */
@@ -169,7 +169,7 @@ export function mountLetterGame(
   /** A new round (new order, round points 0; the total is kept): "לשחק שוב" at the end, or restart on the start screen. */
   function playAgain() {
     ctx.sounds.unlock();
-    progress = newProgress(keys, defaultRng);
+    progress = newProgress(keys, defaultRng, lastPlayed(progress));
     ctx.commit(progress);
     round = roundFor(progress);
     phase = 'play';

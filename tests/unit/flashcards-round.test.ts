@@ -6,6 +6,7 @@ import {
   currentCard,
   isRepeat,
   isValidCardsProgress,
+  lastCard,
   newCardsProgress,
   roundLength,
   type CardsProgress,
@@ -97,5 +98,25 @@ describe('flashcards round', () => {
     expect(isValidCardsProgress({ ...p, done: true }, keys)).toBe(false);
     expect(isValidCardsProgress({ ...p, index: 5 }, keys)).toBe(false);
     expect(isValidCardsProgress({ ...p, roundPoints: '5' }, keys)).toBe(false);
+  });
+});
+
+describe('a new flashcards round never opens with the card just shown', () => {
+  it('puts another card first', () => {
+    for (let seed = 0; seed < 100; seed++) {
+      const p = newCardsProgress(keys, seededRng(seed), 1);
+      expect(currentCard(p)).not.toBe(1);
+      expect([...p.order].sort()).toEqual([0, 1, 2]);
+    }
+  });
+
+  it('the card shown is the current one, or the last one once the round is done (a repeated card)', () => {
+    let p = newCardsProgress(keys, seededRng(1));
+    expect(lastCard(p)).toBe(currentCard(p));
+    const { p: noRepeat } = play(p, [true, true, true]);
+    expect(lastCard(noRepeat)).toBe(noRepeat.order[2]);
+    p = play(p, [false, true, true, true]).p;
+    expect(p.done).toBe(true);
+    expect(lastCard(p)).toBe(p.order[0]);
   });
 });

@@ -91,7 +91,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Never change an activity's `id` | It's the key in storage and in share links |
 | Bump `dataVersion` when the data shape changes; `deserialize` keeps reading old versions | Saved data and old links keep working |
 | Add points and save progress in one `ctx.commit(progress, points)` | Points are never counted twice after a reload |
-| Words/items order random per round; never show the answer directly (exception: flashcards turn over to the answer by design) | Real practice, not memorizing positions |
+| Words/items order random per round; a new round (restart or "לשחק שוב") never starts with the word just played (`newProgress(keys, rng, notFirst)`), unless it's the only one; never show the answer directly (exception: flashcards turn over to the answer by design) | Real practice, not memorizing positions; a kid who restarts after a hard word mustn't get it straight back (a plain shuffle did that 1 time in N) |
 
 **Required tests for each activity:** editor validation (`parse`), game logic, and `deserialize` of stored/shared data (Vitest in `tests/unit/`), plus one smoke test in `tests/e2e/` that plays one item. Add the new game to `GAMES` in `tests/e2e/restart.spec.ts` (continue/restart on the start screen). `npm run test:coverage` prints the coverage report (CI uploads it as `coverage-report`); Choose Word's `parse.ts` and `round.ts` must stay at 95% or more.
 
