@@ -10,7 +10,7 @@ import { pointsForMistakes } from '../../core/scoring';
 import type { GameContext } from '../types';
 import { startScreen } from '../shared/start-screen';
 import { CELEBRATION_MS, MAX_DOTS } from '../shared/letter-game/view';
-import { completeWord, isValidProgress, newProgress, type RoundProgress } from '../shared/letter-game/progress';
+import { completeWord, isValidProgress, lastPlayed, newProgress, type RoundProgress } from '../shared/letter-game/progress';
 import { choose, columnsFor, createChoiceRound, type ChoiceRound } from './round';
 import type { ChooseItem } from './parse';
 
@@ -134,7 +134,7 @@ export function mountChooseGame(
   /** A new round (new order, round points 0; the total is kept): "לשחק שוב" at the end, or restart on the start screen. */
   function playAgain() {
     ctx.sounds.unlock();
-    progress = newProgress(keys, defaultRng);
+    progress = newProgress(keys, defaultRng, lastPlayed(progress));
     ctx.commit(progress);
     round = roundFor(progress);
     phase = 'play';

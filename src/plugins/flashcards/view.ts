@@ -14,7 +14,7 @@ import { startScreen } from '../shared/start-screen';
 import { MAX_DOTS } from '../shared/letter-game/view';
 import { wordCountLabel } from '../shared/letter-game/text';
 import { cardLang, frontParts, type Card } from './parse';
-import { answer, currentCard, newCardsProgress, roundLength, type CardsProgress } from './round';
+import { answer, currentCard, lastCard, newCardsProgress, roundLength, type CardsProgress } from './round';
 import { activeRound, DIRECTIONS, readFlash, withRound, writeFlash, type Direction, type FlashState } from './direction';
 
 type Phase = 'intro' | 'front' | 'back' | 'end';
@@ -153,7 +153,7 @@ export function mountFlashcards(
   function playAgain() {
     cancelNextWord();
     ctx.sounds.unlock();
-    progress = newCardsProgress(keys, defaultRng);
+    progress = newCardsProgress(keys, defaultRng, lastCard(progress));
     state = withRound(state, progress, keys, defaultRng);
     save();
     phase = 'front';

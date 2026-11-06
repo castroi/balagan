@@ -25,8 +25,9 @@ export interface CardsProgress {
   done: boolean;
 }
 
-export function newCardsProgress(keys: readonly string[], rng: Rng): CardsProgress {
-  const { fp, order } = newProgress(keys, rng);
+/** `notFirst` (a card index) never comes first when there's another card. */
+export function newCardsProgress(keys: readonly string[], rng: Rng, notFirst?: number): CardsProgress {
+  const { fp, order } = newProgress(keys, rng, notFirst);
   return { fp, order, again: [], index: 0, roundPoints: 0, done: false };
 }
 
@@ -35,6 +36,10 @@ export const roundLength = (p: CardsProgress): number => p.order.length + p.agai
 
 /** True once the first pass is over and the "עוד לא" cards are coming back. */
 export const isRepeat = (p: CardsProgress): boolean => p.index >= p.order.length;
+
+/** The card being shown, or the last one shown once the round is done (a repeated card, if any). */
+export const lastCard = (p: CardsProgress): number =>
+  p.done ? (p.again.at(-1) ?? p.order[p.order.length - 1]) : currentCard(p);
 
 /** Index (into the cards) of the card being shown. */
 export const currentCard = (p: CardsProgress): number =>

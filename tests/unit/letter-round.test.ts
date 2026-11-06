@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { seededRng } from '../../src/core/rng';
 import { normalizeText } from '../../src/core/unicode';
 import { createRound, MAX_CONFUSIONS, placeTile, type WordRound } from '../../src/plugins/shared/letter-game/round';
-import { fingerprint, isValidProgress, newProgress } from '../../src/plugins/shared/letter-game/progress';
+import { completeWord, fingerprint, isValidProgress, lastPlayed, newProgress } from '../../src/plugins/shared/letter-game/progress';
 
 const word = normalizeText('כַּעַס');
 const idOf = (round: WordRound, text: string) => round.tray.find((t) => t?.text === text)!.id;
@@ -144,5 +144,36 @@ describe('progress keyed by content', () => {
     const p = newProgress(words, seededRng(1));
     expect(isValidProgress(p, words)).toBe(true);
     expect(isValidProgress(p, ['כַּעַס ק', 'עָצוּב'])).toBe(false);
+  });
+});
+
+describe('a new round never opens with the word just played', () => {
+  const words = ['א', 'ב', 'ג'];
+
+  it('puts another word first, in random order, for every seed', () => {
+    for (const notFirst of [0, 1, 2]) {
+      const firsts = new Set<number>();
+      for (let seed = 0; seed < 100; seed++) {
+        const p = newProgress(words, seededRng(seed), notFirst);
+        expect(p.order[0]).not.toBe(notFirst);
+        expect([...p.order].sort()).toEqual([0, 1, 2]);
+        firsts.add(p.order[0]);
+      }
+      expect(firsts.size).toBe(2);
+    }
+  });
+
+  it('keeps a one-word list working', () => {
+    expect(newProgress(['א'], seededRng(1), 0).order).toEqual([0]);
+  });
+
+  it('the word played is the current one, or the last one once the round is done', () => {
+    let p = newProgress(words, seededRng(4));
+    expect(lastPlayed(p)).toBe(p.order[0]);
+    p = completeWord(p, 10);
+    expect(lastPlayed(p)).toBe(p.order[1]);
+    p = completeWord(completeWord(p, 10), 10);
+    expect(p.done).toBe(true);
+    expect(lastPlayed(p)).toBe(p.order[2]);
   });
 });

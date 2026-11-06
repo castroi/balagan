@@ -18,11 +18,19 @@ export interface RoundProgress {
 
 export const fingerprint = (keys: readonly string[]): string => keys.join('\n');
 
-export function newProgress(keys: readonly string[], rng: Rng): RoundProgress {
+/**
+ * A new round in random order. `notFirst` (an item index) never comes first when
+ * there's another item: a new round mustn't open with the word just played.
+ */
+export function newProgress(keys: readonly string[], rng: Rng, notFirst?: number): RoundProgress {
   return {
     fp: fingerprint(keys),
-    order: shuffle(
-      keys.map((_, i) => i),
+    order: avoidFirst(
+      shuffle(
+        keys.map((_, i) => i),
+        rng,
+      ),
+      notFirst,
       rng,
     ),
     index: 0,
@@ -30,6 +38,17 @@ export function newProgress(keys: readonly string[], rng: Rng): RoundProgress {
     done: false,
   };
 }
+
+/** Swaps `notFirst` away from the front, with a random other item, keeping the rest of the order random. */
+function avoidFirst(order: number[], notFirst: number | undefined, rng: Rng): number[] {
+  if (notFirst === undefined || order.length < 2 || order[0] !== notFirst) return order;
+  const j = 1 + Math.floor(rng() * (order.length - 1));
+  [order[0], order[j]] = [order[j], order[0]];
+  return order;
+}
+
+/** The item being played, or the last one played once the round is done. */
+export const lastPlayed = (p: RoundProgress): number => p.order[Math.min(p.index, p.order.length - 1)];
 
 export function isValidProgress(p: unknown, keys: readonly string[]): p is RoundProgress {
   if (typeof p !== 'object' || p === null) return false;
