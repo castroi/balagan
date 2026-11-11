@@ -1,4 +1,5 @@
 import { decodeShare } from './share-codec';
+import { SHORTENER } from './shortener';
 import { getPlugin } from '../plugins/registry';
 import type { AnyPlugin } from '../plugins/types';
 
@@ -10,6 +11,7 @@ const MESSAGES = {
   empty: 'לא הודבק קישור',
   invalid: 'הקישור לא תקין או שנחתך. נסו להעתיק אותו שוב.',
   newer: 'הקישור נוצר בגרסה חדשה יותר של האתר. רעננו את האתר ונסו שוב.',
+  short: 'זה קישור מקוצר, ואי אפשר לטעון אותו כאן. צריך את הקישור המלא: במכשיר ששלח אותו לוחצים על "שיתוף קישור".',
 } as const;
 
 /**
@@ -17,6 +19,8 @@ const MESSAGES = {
  * activities this version doesn't know, or invalid data, are skipped and counted.
  */
 export function readImport(input: string, findPlugin: (id: string) => AnyPlugin | undefined = getPlugin): ImportResult {
+  // A short link only redirects to the full one; the app can't follow it from here.
+  if (SHORTENER.isShortLink(input)) return { error: MESSAGES.short };
   const result = decodeShare(input);
   if (!result.ok) return { error: MESSAGES[result.reason] };
 

@@ -2,6 +2,7 @@ import type { App } from '../app';
 import { PLUGINS } from '../plugins/registry';
 import type { AnyPlugin } from '../plugins/types';
 import { buildShareLink } from '../platform/share-codec';
+import { createShortLink, SHORTENER, SHORT_LINK_DAYS, type ShortLink } from '../platform/shortener';
 import { APP_VERSION } from '../platform/version';
 import { NEWER_VERSION_MESSAGE } from '../platform/storage';
 import { importedTitles } from '../platform/import';
@@ -9,7 +10,7 @@ import { PAIR_SECONDS } from '../platform/settings';
 import { LANGUAGES, type ForeignLang } from '../core/scripts';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
-import { confirmDialog, toast } from './dialog';
+import { announce, confirmDialog, toast } from './dialog';
 
 interface Section {
   el: HTMLElement;
@@ -316,18 +317,27 @@ function settingsSection(app: App): HTMLElement {
 function shareSection(app: App, sections: Section[]): HTMLElement {
   const fallback = h('div', { class: 'share-fallback' });
 
-  async function share() {
-    fallback.replaceChildren();
+  /** The full link for what is saved now, or null (with a message) when nothing is saved. */
+  function currentLink(): string | null {
     const payload = app.sharePayload();
     if (!payload) {
       toast('אין עדיין תוכן שמור לשיתוף');
-      return;
+      return null;
     }
     if (sections.some((s) => s.isDirty())) {
       toast('שימו לב: הקישור כולל רק את מה שנשמר');
     }
-    const link = buildShareLink(window.location.href, payload);
+    return buildShareLink(window.location.href, payload);
+  }
 
+  async function share() {
+    fallback.replaceChildren();
+    const link = currentLink();
+    if (link) await deliver(link);
+  }
+
+  /** Share sheet, else clipboard, else a box to copy from. */
+  async function deliver(link: string) {
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share({ title: 'משימות השבוע', url: link });
@@ -347,6 +357,75 @@ function shareSection(app: App, sections: Section[]): HTMLElement {
     }
   }
 
+  // Short link: two taps on the same button. Making it needs the network, and
+  // iPhone opens the share sheet only straight from a tap, so it can't be one tap.
+  let shortState: { kind: 'idle' } | { kind: 'busy' } | { kind: 'ready'; link: ShortLink; longLink: string } = {
+    kind: 'idle',
+  };
+  const shortLabel = h('span', {}, 'יצירת קישור קצר');
+  const shortBtn = h(
+    'button',
+    { class: 'btn btn-wide', type: 'button', onclick: () => void onShortTap() },
+    icon(ICONS.link),
+    shortLabel,
+  );
+  const shortInfo = h('div', { class: 'share-fallback' });
+
+  function setIdle(message?: string, label = 'יצירת קישור קצר') {
+    shortState = { kind: 'idle' };
+    shortLabel.textContent = label;
+    shortBtn.removeAttribute('aria-disabled');
+    shortInfo.replaceChildren();
+    if (message) {
+      shortInfo.appendChild(h('p', { class: 'msg warning' }, message));
+      announce(message);
+    }
+  }
+
+  async function onShortTap() {
+    if (shortState.kind === 'busy') return;
+    fallback.replaceChildren();
+    if (shortState.kind === 'ready') {
+      // Content saved after the link was made: the short link would load the old content.
+      const now = app.sharePayload();
+      if (!now || buildShareLink(window.location.href, now) !== shortState.longLink) {
+        setIdle('התוכן השתנה — צרו קישור קצר חדש.');
+        return;
+      }
+      // The screen can stay open for days: never share a link that is about to stop working.
+      if (shortState.link.expiresAt.getTime() - Date.now() < 60 * 60 * 1000) {
+        setIdle('הקישור הקצר כבר לא בתוקף — צרו קישור קצר חדש.');
+        return;
+      }
+      if (sections.some((s) => s.isDirty())) toast('שימו לב: הקישור כולל רק את מה שנשמר');
+      await deliver(shortState.link.url);
+      return;
+    }
+
+    const longLink = currentLink();
+    if (!longLink) return;
+    shortState = { kind: 'busy' };
+    shortLabel.textContent = 'יוצרים קישור…';
+    shortBtn.setAttribute('aria-disabled', 'true');
+    shortInfo.replaceChildren();
+    try {
+      const link = await createShortLink(longLink);
+      // The parent left the edit screen while waiting: its messages belong to this screen.
+      if (!shortBtn.isConnected) return;
+      shortState = { kind: 'ready', link, longLink };
+      shortLabel.textContent = 'שיתוף הקישור הקצר';
+      shortBtn.removeAttribute('aria-disabled');
+      shortInfo.replaceChildren(
+        h('p', { class: 'short-url', dir: 'ltr' }, link.url),
+        h('p', { class: 'muted' }, `בתוקף עד ${formatExpiry(link.expiresAt)}`),
+      );
+      announce('הקישור הקצר מוכן');
+    } catch {
+      if (!shortBtn.isConnected) return;
+      setIdle('לא הצלחנו ליצור קישור קצר. אפשר לנסות שוב, או לשתף את הקישור הרגיל.', 'לנסות שוב');
+    }
+  }
+
   return h(
     'section',
     { class: 'panel' },
@@ -359,7 +438,25 @@ function shareSection(app: App, sections: Section[]): HTMLElement {
       h('span', {}, 'שיתוף קישור'),
     ),
     fallback,
+    h(
+      'p',
+      { class: 'muted' },
+      `קישור קצר (נוח לוואטסאפ): התוכן נשלח לשירות ${SHORTENER.name}, והקישור מפסיק לעבוד אחרי ${SHORT_LINK_DAYS} ימים.`,
+    ),
+    shortBtn,
+    shortInfo,
   );
+}
+
+/** e.g. "יום רביעי, 18.11, 21:14" — a date, not "7 days", since messages get forwarded. */
+function formatExpiry(date: Date): string {
+  return date.toLocaleString('he-IL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function importSection(app: App): HTMLElement {

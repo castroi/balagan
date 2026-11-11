@@ -18,7 +18,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Rule | Why |
 |---|---|
 | No server or database; data lives in `localStorage` (`src/platform/storage.ts`) | Simple, free, private |
-| Content moves between devices only via the share link hash `#import=1.<base64url>` | The hash is never sent to the server |
+| Content moves between devices only via the share link hash `#import=1.<base64url>`, or a short link that redirects to it (see "Short share link") | The hash is never sent to the app's server; only a short link the parent asks for leaves the device |
 | Keep the Import box on the edit screen | On iPhone, an installed home-screen app has separate storage and can't receive links directly |
 | TypeScript + Vite, no UI framework | A few screens; type checks catch mistakes before the phone |
 | `npm run build` runs type check (app, tests and config files) + unit tests before building | Vercel won't deploy a broken version |
@@ -30,7 +30,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Device text-to-speech only; no recordings in v1. `speak(text, lang)` speaks Hebrew, Arabic or English (`src/platform/tts.ts`) | Recordings can't travel in a link |
 | A foreign word is never read by another language's voice: with no voice for it the word stays silent | A wrong voice teaches a wrong sound |
 | Voice-test buttons and a "no Hebrew voice" warning on the edit screen; a "no Arabic/English voice" warning only for languages in the list | Voice quality varies by phone; Android often lacks the Arabic voice pack |
-| Practice only — nothing is sent anywhere | No accounts, no tracking |
+| Practice only — nothing is sent anywhere, except the full share link to the link shortener when the parent taps "יצירת קישור קצר" | No accounts, no tracking; a spelling list is fine to send once the parent chooses it (the owner's decision) |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
 | Device settings (e.g. how long the popup with a right/wrong pair stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
@@ -182,6 +182,22 @@ Flashcards for words in another language, in two directions. A different kind of
 | "לעברית": front = the foreign side as the "מעברית" back shows it (reading big, English spelling small, Arabic script never with a reading), spoken in the foreign language, with "מה זה בעברית?"; back = the Hebrew big, spoken in Hebrew, its note small and not spoken, the foreign side small on top | Hearing the foreign word is the task; the pair is seen together |
 | Both directions give the same points (5 per first-pass card), so playing both earns twice | Twice the work, like "לשחק שוב"; nothing rewards the easier direction (recognising, "לעברית") |
 | A ✓ on a direction's switch once a round in it is finished (for these cards) | A quiet hint to try the other direction |
+
+## Short share link — decisions
+
+| Rule | Why |
+|---|---|
+| The app talks to a shortener only through `ShortenerProvider` (`src/platform/shortener.ts`); `SHORTENER` picks the service, now tny.lv (`src/platform/shorteners/tny-lv.ts`) | The service can be replaced without touching the screens |
+| tny.lv has no public API: the provider reads the nonce from its home page and posts what its web form posts (`POST /?ajax=1`, `af_expiry_ts` in Unix seconds), reusing the nonce and fetching a fresh one once when it stops working | Undocumented, so it can break; the full link keeps working when it does |
+| Only an https link on the service's own host is accepted from the answer | A broken or hostile answer must not put another site's link in the parent's message |
+| The link sent to the service gets `?s=<time in base 36>` (`uniqueLink`; the app ignores the query), and a "fail" answer is never used | Services return the existing short link for a link they already have, with its old expiry; every request must make a new link so the date shown is true |
+| A short link finishing after the parent left the edit screen is dropped; a ready link within an hour of expiring is not shared ("הקישור הקצר כבר לא בתוקף") | Messages belong to their screen; a screen left open for days must not share a dead link |
+| The short link expires 7 days after it is made (`SHORT_LINK_DAYS`); the screen shows the date and time it stops working, not "7 days" | Weekly content; a forwarded message must still say when the link dies |
+| Under "שיתוף קישור", one button in two taps: "יצירת קישור קצר" → "שיתוף הקישור הקצר". While waiting it says "יוצרים קישור…" (`aria-disabled`, taps ignored), gives up after 8 s; a failure says so in orange with "לנסות שוב" | iPhone opens the share sheet only straight from a tap, not after a network wait; one changing button instead of a second button that is dead until the first is used |
+| Before sharing, the short link is compared with the full link of what is saved now; if they differ: "התוכן השתנה — צרו קישור קצר חדש." | Saving doesn't re-render the screen; a stale short link would load last week's content |
+| The short link and its state live in memory only, never saved | Nothing new in storage or in the share link |
+| A short link pasted into the Import box gets a message asking for the full link | The app can't follow the redirect (another site), and opening it removes the hash from the address bar |
+| The full-link button stays first and unchanged | The Import box needs it; it works with no network service |
 
 ## Not done on purpose (possible later)
 
