@@ -62,10 +62,10 @@ export async function handleShorten(request: Request, service: ShortenerProvider
     return json(400, { error: 'expiresAt' });
   }
 
-  // Under the app's 8 s, leaving time for a cold start; stop too when the app gives up.
+  // Under the app's 8 s, leaving time for a cold start. (Not tied to request.signal:
+  // some Node adapters fire it as soon as the body is read, which would abort every call.)
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SERVICE_TIMEOUT_MS);
-  request.signal?.addEventListener('abort', () => controller.abort(), { once: true });
   try {
     const shorturl = await service.shorten(url, new Date(expiresAt * 1000), controller.signal);
     return json(200, { shorturl });
