@@ -95,6 +95,7 @@ describe('tny.lv provider', () => {
     expect(findNonce('fetch("/?ajax=1&nonce=6bb3f85f93")')).toBe('6bb3f85f93');
     expect(findNonce(`nonce='6bb3f85f93'`)).toBe('6bb3f85f93');
     expect(findNonce(`data.append('nonce', '6bb3f85f93');`)).toBe('6bb3f85f93');
+    expect(findNonce('<div data-config="{&quot;nonce&quot;:&quot;6bb3f85f93&quot;}">')).toBe('6bb3f85f93');
     expect(findNonce(`{\\"nonce\\":\\"6bb3f85f93\\"}`)).toBe('6bb3f85f93');
     // A script's (base64) CSP nonce, or a hex-looking file name, is not the form's nonce.
     expect(findNonce('<script nonce="rAnd0mB4se64Valu3Xy==" src="app.abcdef0123.js"></script>')).toBeNull();
@@ -140,6 +141,8 @@ describe('tny.lv provider', () => {
     expect(headers.cookie).toBe('PHPSESSID=abc123');
     expect(headers['x-requested-with']).toBe('XMLHttpRequest');
     expect(headers.referer).toBe('https://tny.lv/');
+    expect(headers['user-agent']).toMatch(/^Balagan-shortener/);
+    expect((calls[0].init?.headers as Record<string, string>)['user-agent']).toMatch(/^Balagan-shortener/);
   });
 
   it('says why it failed (for the server log), without the link', async () => {
@@ -149,6 +152,13 @@ describe('tny.lv provider', () => {
       .catch((e: Error) => e);
     expect(String(error)).toContain('status=fail code=error:nonce message=Unauthorized');
     expect(String(error)).not.toContain('secret');
+    // YOURLS can quote the link in its message: it never reaches the log.
+    const { impl: dup } = fakeFetch(['6bb3f85f93'], [
+      { status: 'fail', code: 'error:url', message: 'https://example.app/?s=x#import=1.secret already exists in database' },
+    ]);
+    const error3 = await createTnyLv(dup).shorten('https://example.app/', expiryFrom(NOW), signal).catch((e: Error) => e);
+    expect(String(error3)).toContain('code=error:url message=<link> already exists in database');
+    expect(String(error3)).not.toMatch(/secret|example\.app|import=/);
     const noNonce = (async () => new Response('<p>maintenance</p>')) as typeof fetch;
     const error2 = await createTnyLv(noNonce).shorten('https://example.app/', expiryFrom(NOW), signal).catch((e: Error) => e);
     expect(String(error2)).toContain('no nonce found');
