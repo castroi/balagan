@@ -464,6 +464,20 @@ body:has(.screen.edit) {
   gap: 6px;
 }
 
+/* Short link: selectable, so it can be copied with a long press. */
+.short-url {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 18px;
+  text-align: left;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.btn[aria-disabled='true'] {
+  opacity: 0.6;
+}
+
 /* ---------- dialog & toast ---------- */
 
 .overlay {

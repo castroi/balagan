@@ -88,3 +88,12 @@ describe('importedTitles', () => {
     expect('entries' in result && importedTitles(result.entries)).toBe('מילים מבולגנות, אותיות מבלבלות');
   });
 });
+
+describe('readImport with a short link', () => {
+  it('explains that a short link must be opened as the full link', () => {
+    for (const text of ['https://tny.lv/eJLj4', 'tny.lv/eJLj4']) {
+      const result = readImport(text);
+      expect('error' in result && result.error).toContain('קישור מקוצר');
+    }
+  });
+});
