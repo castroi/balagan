@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createShortLink, expiryFrom, SHORT_LINK_DAYS, type ShortenerProvider } from '../../src/platform/shortener';
+import {
+  createShortLink,
+  expiryFrom,
+  SHORT_LINK_DAYS,
+  uniqueLink,
+  type ShortenerProvider,
+} from '../../src/platform/shortener';
+import { decodeShare } from '../../src/platform/share-codec';
 import { createTnyLv, findNonce, readShortUrl } from '../../src/platform/shorteners/tny-lv';
 
 const NOW = new Date('2026-11-11T21:14:00Z');
@@ -15,7 +22,7 @@ describe('createShortLink', () => {
     expect(expiryFrom(NOW).toISOString()).toBe('2026-11-18T21:14:00.000Z');
   });
 
-  it('passes the link and the expiry to the provider', async () => {
+  it('passes the link, made unique, and the expiry to the provider', async () => {
     const calls: [string, Date][] = [];
     const provider = fakeProvider(async (url, expiresAt) => {
       calls.push([url, expiresAt]);
@@ -23,7 +30,17 @@ describe('createShortLink', () => {
     });
     const link = await createShortLink('https://example.app/#import=1.x', provider, NOW);
     expect(link).toEqual({ url: 'https://sho.rt/abc', expiresAt: expiryFrom(NOW) });
-    expect(calls).toEqual([['https://example.app/#import=1.x', expiryFrom(NOW)]]);
+    expect(calls).toEqual([[uniqueLink('https://example.app/#import=1.x', NOW), expiryFrom(NOW)]]);
+  });
+
+  it('makes every request a new link, and the content still loads from it', () => {
+    const code = 'eyJhIjp7InNjcmFtYmxlZC13b3JkcyI6eyJ2IjoxLCJkIjp7IndvcmRzIjpbIteQIl19fX19';
+    const unique = uniqueLink(`https://example.app/#import=1.${code}`, NOW);
+    expect(unique).toBe(`https://example.app/?s=${NOW.getTime().toString(36)}#import=1.${code}`);
+    expect(uniqueLink('https://example.app/#import=1.x', new Date(NOW.getTime() + 1))).not.toBe(
+      uniqueLink('https://example.app/#import=1.x', NOW),
+    );
+    expect(decodeShare(unique)).toEqual(decodeShare(`https://example.app/#import=1.${code}`));
   });
 
   it('gives up after the timeout and aborts the request', async () => {
@@ -68,7 +85,14 @@ describe('tny.lv provider', () => {
     expect(findNonce(PAGE)).toBe('6bb3f85f93');
     expect(findNonce(`var data = { nonce: '6bb3f85f93' };`)).toBe('6bb3f85f93');
     expect(findNonce(`{"nonce":"6bb3f85f93"}`)).toBe('6bb3f85f93');
+    expect(findNonce(`<input value="6bb3f85f93" name="nonce" type="hidden">`)).toBe('6bb3f85f93');
+    expect(findNonce(`var nonce = "6bb3f85f93";`)).toBe('6bb3f85f93');
     expect(findNonce('<p>no form</p>')).toBeNull();
+    // A script's CSP nonce, or a hex-looking file name, is not the form's nonce.
+    expect(findNonce('<script nonce="0123456789" src="app.abcdef0123.js"></script>')).toBeNull();
+    expect(
+      findNonce('<script nonce="0123456789"></script><input type="hidden" name="nonce" value="6bb3f85f93">'),
+    ).toBe('6bb3f85f93');
   });
 
   it('accepts only an https tny.lv short link from the answer', () => {
@@ -77,6 +101,9 @@ describe('tny.lv provider', () => {
     expect(readShortUrl({ shorturl: 'https://evil.example/eJLj4' })).toBeNull();
     expect(readShortUrl({ shorturl: 'https://tny.lv/' })).toBeNull();
     expect(readShortUrl({ status: 'fail' })).toBeNull();
+    // An existing link comes back with "fail" and its old expiry: not used.
+    expect(readShortUrl({ status: 'fail', shorturl: 'https://tny.lv/old' })).toBeNull();
+    expect(readShortUrl({ status: 'success', shorturl: 'https://tny.lv/new' })).toBe('https://tny.lv/new');
     expect(readShortUrl(null)).toBeNull();
   });
 

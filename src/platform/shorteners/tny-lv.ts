@@ -11,15 +11,27 @@ const ORIGIN = 'https://tny.lv';
 
 /** Finds the form's nonce (10 hex characters) in the home page HTML. */
 export function findNonce(html: string): string | null {
-  // The first 10-hex-character word shortly after "nonce": works for
-  // name="nonce" value="…", nonce: '…' and "nonce":"…".
-  const match = /nonce[\s\S]{0,60}?\b([0-9a-f]{10})\b/i.exec(html);
-  return match ? match[1] : null;
+  // Only the form field or a script value named exactly "nonce" — never a
+  // <script nonce="…"> attribute or a hex-looking file name nearby.
+  const patterns = [
+    /name=["']nonce["'][^>]*?value=["']([0-9a-f]{10})["']/,
+    /value=["']([0-9a-f]{10})["'][^>]*?name=["']nonce["']/,
+    /["']?\bnonce["']?\s*:\s*["']([0-9a-f]{10})["']/,
+    /\bnonce\s+=\s*["']([0-9a-f]{10})["']/,
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(html);
+    if (match) return match[1];
+  }
+  return null;
 }
 
 /** The short link from the response, only when it is an https tny.lv link. */
 export function readShortUrl(body: unknown): string | null {
   if (typeof body !== 'object' || body === null) return null;
+  // YOURLS answers "fail" (with the old short link) for a link it already has:
+  // that old link has another expiry, so it is not used.
+  if ((body as { status?: unknown }).status === 'fail') return null;
   const value = (body as { shorturl?: unknown }).shorturl;
   if (typeof value !== 'string') return null;
   try {

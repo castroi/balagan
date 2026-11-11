@@ -47,6 +47,9 @@ async function openEdit(page: Page) {
 }
 
 test.describe('short link', () => {
+  // The built app's service worker must not stand between the page and the fake tny.lv.
+  test.use({ serviceWorkers: 'block' });
+
   test('first tap makes the short link, second tap shares it', async ({ page }) => {
     await recordShares(page);
     const asked = await fakeTnyLv(page);
@@ -61,10 +64,13 @@ test.describe('short link', () => {
     await page.getByRole('button', { name: 'שיתוף הקישור הקצר' }).click();
     expect(await shared(page)).toEqual(['https://tny.lv/t1']);
 
-    // What was shortened is the same full link the regular button shares.
+    // What was shortened is the full link the regular button shares, plus the ignored ?s= marker.
     expect(decodeShare(asked[0]).ok).toBe(true);
+    const sent = new URL(asked[0]);
+    expect(sent.searchParams.get('s')).toBeTruthy();
+    sent.searchParams.delete('s');
     await page.getByRole('button', { name: 'שיתוף קישור' }).click();
-    expect((await shared(page))[1]).toBe(asked[0]);
+    expect((await shared(page))[1]).toBe(sent.href);
   });
 
   test('when the service fails, it says so and the regular link still works', async ({ page }) => {
@@ -74,7 +80,7 @@ test.describe('short link', () => {
     await saveWords(page, 'כַּעַס');
 
     await page.getByRole('button', { name: 'יצירת קישור קצר' }).click();
-    await expect(page.getByText('לא הצלחנו ליצור קישור קצר', { exact: false })).toBeVisible();
+    await expect(page.locator('.msg.warning')).toContainText('לא הצלחנו ליצור קישור קצר');
     await expect(page.getByRole('button', { name: 'לנסות שוב' })).toBeVisible();
 
     await page.getByRole('button', { name: 'שיתוף קישור' }).click();
@@ -92,7 +98,7 @@ test.describe('short link', () => {
 
     await saveWords(page, 'כַּעַס\nעָצוּב');
     await page.getByRole('button', { name: 'שיתוף הקישור הקצר' }).click();
-    await expect(page.getByText('התוכן השתנה — צרו קישור קצר חדש.')).toBeVisible();
+    await expect(page.locator('.msg.warning')).toHaveText('התוכן השתנה — צרו קישור קצר חדש.');
     expect(await shared(page)).toEqual([]);
     await expect(page.getByRole('button', { name: 'יצירת קישור קצר' })).toBeVisible();
   });

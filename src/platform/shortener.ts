@@ -30,6 +30,17 @@ export function expiryFrom(now: Date, days = SHORT_LINK_DAYS): Date {
   return new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
+/**
+ * The link with `?s=<time>` added (the app ignores it). Services return the
+ * existing short link for a link they already have, with its old expiry; the
+ * marker makes every request new, so the expiry shown is the real one.
+ */
+export function uniqueLink(longUrl: string, now: Date): string {
+  const url = new URL(longUrl);
+  url.searchParams.set('s', now.getTime().toString(36));
+  return url.href;
+}
+
 /** Shortens a link, expiring `SHORT_LINK_DAYS` from `now`; throws on failure or timeout. */
 export async function createShortLink(
   longUrl: string,
@@ -42,7 +53,7 @@ export async function createShortLink(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const url = await Promise.race([
-      provider.shorten(longUrl, expiresAt, controller.signal),
+      provider.shorten(uniqueLink(longUrl, now), expiresAt, controller.signal),
       new Promise<never>((_, reject) =>
         controller.signal.addEventListener('abort', () => reject(new Error('timeout')), { once: true }),
       ),

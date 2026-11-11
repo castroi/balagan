@@ -371,9 +371,9 @@ function shareSection(app: App, sections: Section[]): HTMLElement {
   );
   const shortInfo = h('div', { class: 'share-fallback' });
 
-  function setIdle(message?: string) {
+  function setIdle(message?: string, label = 'יצירת קישור קצר') {
     shortState = { kind: 'idle' };
-    shortLabel.textContent = 'יצירת קישור קצר';
+    shortLabel.textContent = label;
     shortBtn.removeAttribute('aria-disabled');
     shortInfo.replaceChildren();
     if (message) {
@@ -392,6 +392,12 @@ function shareSection(app: App, sections: Section[]): HTMLElement {
         setIdle('התוכן השתנה — צרו קישור קצר חדש.');
         return;
       }
+      // The screen can stay open for days: never share a link that is about to stop working.
+      if (shortState.link.expiresAt.getTime() - Date.now() < 60 * 60 * 1000) {
+        setIdle('הקישור הקצר כבר לא בתוקף — צרו קישור קצר חדש.');
+        return;
+      }
+      if (sections.some((s) => s.isDirty())) toast('שימו לב: הקישור כולל רק את מה שנשמר');
       await deliver(shortState.link.url);
       return;
     }
@@ -404,6 +410,8 @@ function shareSection(app: App, sections: Section[]): HTMLElement {
     shortInfo.replaceChildren();
     try {
       const link = await createShortLink(longLink);
+      // The parent left the edit screen while waiting: its messages belong to this screen.
+      if (!shortBtn.isConnected) return;
       shortState = { kind: 'ready', link, longLink };
       shortLabel.textContent = 'שיתוף הקישור הקצר';
       shortBtn.removeAttribute('aria-disabled');
@@ -413,8 +421,8 @@ function shareSection(app: App, sections: Section[]): HTMLElement {
       );
       announce('הקישור הקצר מוכן');
     } catch {
-      setIdle('לא הצלחנו ליצור קישור קצר. אפשר לנסות שוב, או לשתף את הקישור הרגיל.');
-      shortLabel.textContent = 'לנסות שוב';
+      if (!shortBtn.isConnected) return;
+      setIdle('לא הצלחנו ליצור קישור קצר. אפשר לנסות שוב, או לשתף את הקישור הרגיל.', 'לנסות שוב');
     }
   }
 
