@@ -69,7 +69,9 @@ export async function handleShorten(request: Request, service: ShortenerProvider
   try {
     const shorturl = await service.shorten(url, new Date(expiresAt * 1000), controller.signal);
     return json(200, { shorturl });
-  } catch {
+  } catch (error) {
+    // Shown in Vercel → Logs. Only the reason: the link carries the week's words.
+    console.error('shorten failed:', error instanceof Error ? error.message : String(error));
     return json(502, { error: 'service' });
   } finally {
     clearTimeout(timer);
