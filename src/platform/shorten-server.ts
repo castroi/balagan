@@ -1,4 +1,8 @@
 import type { ShortenerProvider } from './shortener';
+import { SHARE_FORMAT_VERSION } from './share-codec.js';
+
+/** How long the function waits for the service (the app waits 8 s in all). */
+export const SERVICE_TIMEOUT_MS = 6000;
 
 /** Longest expiry the server accepts (the app asks for 7 days; a day of clock difference is allowed). */
 export const MAX_EXPIRY_DAYS = 8;
@@ -34,10 +38,19 @@ export async function handleShorten(request: Request, service: ShortenerProvider
   } catch {
     return json(400, { error: 'url' });
   }
-  const host = request.headers.get('host');
-  if (!host || link.host !== host || link.protocol !== 'https:' || !link.hash.startsWith('#import=')) {
+  // Only this site's own share link: its host, its home page, the current link format.
+  const host = new URL(request.url).host;
+  if (
+    link.host !== host ||
+    link.protocol !== 'https:' ||
+    link.pathname !== '/' ||
+    !link.hash.startsWith(`#import=${SHARE_FORMAT_VERSION}.`)
+  ) {
     return json(400, { error: 'url' });
   }
+  // Browsers send Origin with every POST: a request from another site's page is refused.
+  const origin = request.headers.get('origin');
+  if (origin !== null && origin !== `https://${host}`) return json(403, { error: 'origin' });
 
   const nowSeconds = Math.floor(now.getTime() / 1000);
   if (
@@ -49,8 +62,10 @@ export async function handleShorten(request: Request, service: ShortenerProvider
     return json(400, { error: 'expiresAt' });
   }
 
+  // Under the app's 8 s, leaving time for a cold start; stop too when the app gives up.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 7000);
+  const timer = setTimeout(() => controller.abort(), SERVICE_TIMEOUT_MS);
+  request.signal?.addEventListener('abort', () => controller.abort(), { once: true });
   try {
     const shorturl = await service.shorten(url, new Date(expiresAt * 1000), controller.signal);
     return json(200, { shorturl });

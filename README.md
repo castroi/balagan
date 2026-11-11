@@ -87,6 +87,7 @@ Automated tests can't cover these:
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
 - [ ] Edit screen → הגדרות: the time the letter pair stays after a word feels right for the kid.
 - [ ] Share link with a full week of all four activities (20 words each, 4 options per Choose Word line, 30 three-part Arabic cards with harakat at the 20-character limit), sent and opened from WhatsApp, loads all four.
+- [ ] Preview deploy: the function runs. In Vercel → the deployment → Functions, `api/shorten` is listed, and after one tap on "יצירת קישור קצר" its log shows no error (e.g. no `ERR_MODULE_NOT_FOUND`).
 - [ ] Edit screen → "יצירת קישור קצר" on the live site (iPhone and Android): the short link and its expiry date appear, "שיתוף הקישור הקצר" opens the share sheet, and the link opened from WhatsApp loads the content. If it says it couldn't make the link, check the function's log in Vercel (Project → Logs, `/api/shorten`).
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.

@@ -22,17 +22,18 @@ function fakeService(answer: () => Promise<string>) {
   return { service, calls };
 }
 
-const post = (body: unknown, host = 'balagan.example', method = 'POST') =>
-  new Request('https://balagan.example/api/shorten', {
+const post = (body: unknown, host = 'balagan.example', method = 'POST', origin?: string) =>
+  new Request(`https://${host}/api/shorten`, {
     method,
-    headers: { host, 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...(origin ? { origin } : {}) },
     body: method === 'POST' ? (typeof body === 'string' ? body : JSON.stringify(body)) : undefined,
   });
 
 describe('POST /api/shorten', () => {
   it('shortens this site’s share link with the expiry it was given', async () => {
     const { service, calls } = fakeService(async () => 'https://tny.lv/eJLj4');
-    const response = await handleShorten(post({ url: LINK, expiresAt: NOW_S + WEEK_S }), service, NOW);
+    const fromApp = post({ url: LINK, expiresAt: NOW_S + WEEK_S }, 'balagan.example', 'POST', 'https://balagan.example');
+    const response = await handleShorten(fromApp, service, NOW);
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ shorturl: 'https://tny.lv/eJLj4' });
     expect(calls).toEqual([[LINK, new Date((NOW_S + WEEK_S) * 1000)]]);
@@ -44,6 +45,8 @@ describe('POST /api/shorten', () => {
       post({ url: 'https://evil.example/#import=1.xyz', expiresAt: NOW_S + WEEK_S }),
       post({ url: 'https://balagan.example/some/page', expiresAt: NOW_S + WEEK_S }),
       post({ url: 'http://balagan.example/#import=1.xyz', expiresAt: NOW_S + WEEK_S }),
+      post({ url: 'https://balagan.example/other/#import=1.xyz', expiresAt: NOW_S + WEEK_S }),
+      post({ url: 'https://balagan.example/#import=2.xyz', expiresAt: NOW_S + WEEK_S }),
       post({ url: LINK, expiresAt: NOW_S + WEEK_S }, 'evil.example'),
       post({ url: 'not a url', expiresAt: NOW_S + WEEK_S }),
       post({ url: LINK + 'x'.repeat(64_001), expiresAt: NOW_S + WEEK_S }),
@@ -55,6 +58,9 @@ describe('POST /api/shorten', () => {
     ];
     for (const request of bad) expect((await handleShorten(request, service, NOW)).status).toBe(400);
     expect((await handleShorten(post(null, 'balagan.example', 'GET'), service, NOW)).status).toBe(405);
+    // A page on another site posting to this function.
+    const fromElsewhere = post({ url: LINK, expiresAt: NOW_S + WEEK_S }, 'balagan.example', 'POST', 'https://evil.example');
+    expect((await handleShorten(fromElsewhere, service, NOW)).status).toBe(403);
     expect(calls).toEqual([]);
   });
 
