@@ -19,19 +19,13 @@ async function recordShares(page: Page) {
 }
 const shared = (page: Page) => page.evaluate(() => (window as unknown as ShareWindow).__shared.slice());
 
-const CORS = { 'access-control-allow-origin': '*' };
-
-/** A fake tny.lv; returns the long links it was asked to shorten. */
-async function fakeTnyLv(page: Page) {
+/** A fake /api/shorten (the server function); returns the long links it was asked to shorten. */
+async function fakeServer(page: Page) {
   const asked: string[] = [];
-  await page.route('https://tny.lv/**', async (route) => {
-    const request = route.request();
-    if (request.method() === 'POST') {
-      asked.push(new URLSearchParams(request.postData() ?? '').get('url') ?? '');
-      await route.fulfill({ headers: CORS, contentType: 'application/json', body: JSON.stringify({ shorturl: `https://tny.lv/t${asked.length}` }) });
-    } else {
-      await route.fulfill({ headers: CORS, contentType: 'text/html', body: '<input type="hidden" name="nonce" value="6bb3f85f93">' });
-    }
+  await page.route('**/api/shorten', async (route) => {
+    const body = route.request().postDataJSON() as { url: string; expiresAt: number };
+    asked.push(body.url);
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ shorturl: `https://tny.lv/t${asked.length}` }) });
   });
   return asked;
 }
@@ -47,12 +41,12 @@ async function openEdit(page: Page) {
 }
 
 test.describe('short link', () => {
-  // The built app's service worker must not stand between the page and the fake tny.lv.
+  // The built app's service worker must not stand between the page and the fake server.
   test.use({ serviceWorkers: 'block' });
 
   test('first tap makes the short link, second tap shares it', async ({ page }) => {
     await recordShares(page);
-    const asked = await fakeTnyLv(page);
+    const asked = await fakeServer(page);
     await openEdit(page);
     await saveWords(page, 'כַּעַס\nעָצוּב');
 
@@ -75,7 +69,7 @@ test.describe('short link', () => {
 
   test('when the service fails, it says so and the regular link still works', async ({ page }) => {
     await recordShares(page);
-    await page.route('https://tny.lv/**', (route) => route.abort());
+    await page.route('**/api/shorten', (route) => route.fulfill({ status: 502, body: '{"error":"service"}' }));
     await openEdit(page);
     await saveWords(page, 'כַּעַס');
 
@@ -90,7 +84,7 @@ test.describe('short link', () => {
 
   test('a short link made before the content changed is not shared', async ({ page }) => {
     await recordShares(page);
-    await fakeTnyLv(page);
+    await fakeServer(page);
     await openEdit(page);
     await saveWords(page, 'כַּעַס');
     await page.getByRole('button', { name: 'יצירת קישור קצר' }).click();

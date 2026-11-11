@@ -1,4 +1,5 @@
-import { createTnyLv } from './shorteners/tny-lv';
+import { createService } from './shorteners/service';
+import { viaServer } from './shorteners/via-server';
 
 /**
  * A link-shortening service. The app talks only to this interface, so the
@@ -18,8 +19,8 @@ export interface ShortLink {
   expiresAt: Date;
 }
 
-/** The provider the app uses. Change this line to switch services. */
-export const SHORTENER: ShortenerProvider = createTnyLv();
+/** The provider the app uses: the server function, with the service from `shorteners/service.ts`. */
+export const SHORTENER: ShortenerProvider = viaServer(createService());
 
 /** A short link stops working this many days after it is made. */
 export const SHORT_LINK_DAYS = 7;

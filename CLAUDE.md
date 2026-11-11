@@ -1,6 +1,6 @@
 # Balagan (בלגן) — project rules
 
-Hebrew writing practice — and words in another language (Arabic, English) — for one kid (up to age 10) on a phone. A parent pastes the week's content; the kid plays. Static site on Vercel, no server, no database.
+Hebrew writing practice — and words in another language (Arabic, English) — for one kid (up to age 10) on a phone. A parent pastes the week's content; the kid plays. Static site on Vercel, no database; one small Vercel function (`api/shorten.ts`) only for short links.
 
 Each rule has a one-line **why**. Don't change a rule without understanding its reason; if a rule must change, update this file in the same change.
 
@@ -17,8 +17,8 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 | Rule | Why |
 |---|---|
-| No server or database; data lives in `localStorage` (`src/platform/storage.ts`) | Simple, free, private |
-| Content moves between devices only via the share link hash `#import=1.<base64url>`, or a short link that redirects to it (see "Short share link") | The hash is never sent to the app's server; only a short link the parent asks for leaves the device |
+| No database; data lives in `localStorage` (`src/platform/storage.ts`). The only server code is the Vercel function `api/shorten.ts` (free Hobby plan, no VPS), which keeps nothing | Simple, free, private; browsers block the app from reading the shortening service's answer (CORS), so that one call has to come from the server |
+| Content moves between devices only via the share link hash `#import=1.<base64url>`, or a short link that redirects to it (see "Short share link") | Opening or sharing a link never sends the hash to a server; only when the parent taps "יצירת קישור קצר" does the full link go to the app's own function and on to the shortener |
 | Keep the Import box on the edit screen | On iPhone, an installed home-screen app has separate storage and can't receive links directly |
 | TypeScript + Vite, no UI framework | A few screens; type checks catch mistakes before the phone |
 | `npm run build` runs type check (app, tests and config files) + unit tests before building | Vercel won't deploy a broken version |
@@ -30,7 +30,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Device text-to-speech only; no recordings in v1. `speak(text, lang)` speaks Hebrew, Arabic or English (`src/platform/tts.ts`) | Recordings can't travel in a link |
 | A foreign word is never read by another language's voice: with no voice for it the word stays silent | A wrong voice teaches a wrong sound |
 | Voice-test buttons and a "no Hebrew voice" warning on the edit screen; a "no Arabic/English voice" warning only for languages in the list | Voice quality varies by phone; Android often lacks the Arabic voice pack |
-| Practice only — nothing is sent anywhere, except the full share link to the link shortener when the parent taps "יצירת קישור קצר" | No accounts, no tracking; a spelling list is fine to send once the parent chooses it (the owner's decision) |
+| Practice only — nothing is sent anywhere, except the full share link, through the app's own function (`api/shorten.ts`) to the link shortener, when the parent taps "יצירת קישור קצר" | No accounts, no tracking; a spelling list is fine to send once the parent chooses it (the owner's decision) |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
 | Device settings (e.g. how long the popup with a right/wrong pair stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
@@ -187,9 +187,12 @@ Flashcards for words in another language, in two directions. A different kind of
 
 | Rule | Why |
 |---|---|
-| The app talks to a shortener only through `ShortenerProvider` (`src/platform/shortener.ts`); `SHORTENER` picks the service, now tny.lv (`src/platform/shorteners/tny-lv.ts`) | The service can be replaced without touching the screens |
+| The app talks to a shortener only through `ShortenerProvider` (`src/platform/shortener.ts`). The app's provider (`viaServer`) posts `{ url, expiresAt }` to `/api/shorten`; the function (`handleShorten` in `src/platform/shorten-server.ts`) calls the service. `createService` in `src/platform/shorteners/service.ts` picks the service for both, now tny.lv (`tny-lv.ts`) | Switching services is one new provider and one line, without touching the screens or the function |
+| The function shortens only this site's own share links: https, the request's own host (from the request URL), the home page `/`, a hash starting with `#import=<SHARE_FORMAT_VERSION>.`, at most 64k characters, an expiry in the future and at most 8 days away; a POST whose `Origin` is another site gets 403; the app checks the answer again (https, the service's own link) | Nobody can use the function to hide other links behind the service or get it blocked there, and a bad answer never reaches the parent's message |
+| The function waits at most 6 s for the service (`SERVICE_TIMEOUT_MS`); the app waits 8 s. It doesn't listen to `request.signal` | Room for a cold start, so a slow success isn't lost; some Node adapters fire `request.signal` once the body is read, which would abort every call |
+| Imports in the function's files (`api/`, `shorten-server.ts`, `shorteners/service.ts`, `tny-lv.ts`) end in `.js` or are `import type` only | Vercel runs the function as an ES module without bundling, and Node needs the extension |
 | tny.lv has no public API: the provider reads the nonce from its home page and posts what its web form posts (`POST /?ajax=1`, `af_expiry_ts` in Unix seconds), reusing the nonce and fetching a fresh one once when it stops working | Undocumented, so it can break; the full link keeps working when it does |
-| Only an https link on the service's own host is accepted from the answer | A broken or hostile answer must not put another site's link in the parent's message |
+| Only an https link on the service's own host is accepted from the service's answer | A broken or hostile answer must not put another site's link in the parent's message |
 | The link sent to the service gets `?s=<time in base 36>` (`uniqueLink`; the app ignores the query), and a "fail" answer is never used | Services return the existing short link for a link they already have, with its old expiry; every request must make a new link so the date shown is true |
 | A short link finishing after the parent left the edit screen is dropped; a ready link within an hour of expiring is not shared ("הקישור הקצר כבר לא בתוקף") | Messages belong to their screen; a screen left open for days must not share a dead link |
 | The short link expires 7 days after it is made (`SHORT_LINK_DAYS`); the screen shows the date and time it stops working, not "7 days" | Weekly content; a forwarded message must still say when the link dies |
