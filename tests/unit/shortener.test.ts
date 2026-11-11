@@ -74,7 +74,10 @@ describe('tny.lv provider', () => {
         const answer = answers.shift();
         return new Response(typeof answer === 'string' ? answer : JSON.stringify(answer), { status: 200 });
       }
-      return new Response(`<input name="nonce" value="${nonces.shift()}">`, { status: 200 });
+      return new Response(`<input name="nonce" value="${nonces.shift()}">`, {
+        status: 200,
+        headers: { 'set-cookie': 'PHPSESSID=abc123; path=/; HttpOnly' },
+      });
     }) as typeof fetch;
     return { impl, calls };
   }
@@ -88,10 +91,15 @@ describe('tny.lv provider', () => {
     expect(findNonce(`<input value="6bb3f85f93" name="nonce" type="hidden">`)).toBe('6bb3f85f93');
     expect(findNonce(`var nonce = "6bb3f85f93";`)).toBe('6bb3f85f93');
     expect(findNonce('<p>no form</p>')).toBeNull();
-    // A script's CSP nonce, or a hex-looking file name, is not the form's nonce.
-    expect(findNonce('<script nonce="0123456789" src="app.abcdef0123.js"></script>')).toBeNull();
+    expect(findNonce('<div data-nonce="6bb3f85f93"></div>')).toBe('6bb3f85f93');
+    expect(findNonce('fetch("/?ajax=1&nonce=6bb3f85f93")')).toBe('6bb3f85f93');
+    expect(findNonce(`nonce='6bb3f85f93'`)).toBe('6bb3f85f93');
+    expect(findNonce(`data.append('nonce', '6bb3f85f93');`)).toBe('6bb3f85f93');
+    expect(findNonce(`{\\"nonce\\":\\"6bb3f85f93\\"}`)).toBe('6bb3f85f93');
+    // A script's (base64) CSP nonce, or a hex-looking file name, is not the form's nonce.
+    expect(findNonce('<script nonce="rAnd0mB4se64Valu3Xy==" src="app.abcdef0123.js"></script>')).toBeNull();
     expect(
-      findNonce('<script nonce="0123456789"></script><input type="hidden" name="nonce" value="6bb3f85f93">'),
+      findNonce('<script nonce="rAnd0mB4se64Valu3Xy=="></script><input type="hidden" name="nonce" value="6bb3f85f93">'),
     ).toBe('6bb3f85f93');
   });
 
@@ -123,6 +131,27 @@ describe('tny.lv provider', () => {
       af_expiry_ts: '1795036440',
       af_password: '',
     });
+  });
+
+  it('sends the page’s cookies back and the headers of the site’s own form', async () => {
+    const { impl, calls } = fakeFetch(['6bb3f85f93'], [{ shorturl: 'https://tny.lv/eJLj4' }]);
+    await createTnyLv(impl).shorten('https://example.app/', expiryFrom(NOW), signal);
+    const headers = posts(calls)[0].init?.headers as Record<string, string>;
+    expect(headers.cookie).toBe('PHPSESSID=abc123');
+    expect(headers['x-requested-with']).toBe('XMLHttpRequest');
+    expect(headers.referer).toBe('https://tny.lv/');
+  });
+
+  it('says why it failed (for the server log), without the link', async () => {
+    const { impl } = fakeFetch(['6bb3f85f93'], [{ status: 'fail', code: 'error:nonce', message: 'Unauthorized' }]);
+    const error = await createTnyLv(impl)
+      .shorten('https://example.app/#import=1.secret', expiryFrom(NOW), signal)
+      .catch((e: Error) => e);
+    expect(String(error)).toContain('status=fail code=error:nonce message=Unauthorized');
+    expect(String(error)).not.toContain('secret');
+    const noNonce = (async () => new Response('<p>maintenance</p>')) as typeof fetch;
+    const error2 = await createTnyLv(noNonce).shorten('https://example.app/', expiryFrom(NOW), signal).catch((e: Error) => e);
+    expect(String(error2)).toContain('no nonce found');
   });
 
   it('reuses the nonce, and gets a fresh one once when the old one stops working', async () => {
