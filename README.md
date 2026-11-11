@@ -1,6 +1,6 @@
 # Balagan (בלגן) — Hebrew writing practice
 
-A small website for practising Hebrew spelling at home. A parent pastes the week's content; the kid plays on a phone. No server and no database — everything is saved on the device, and content moves between devices with a share link.
+A small website for practising Hebrew spelling at home. A parent pastes the week's content; the kid plays on a phone. No database — everything is saved on the device (one small Vercel function only makes short links), and content moves between devices with a share link.
 
 Assignment types:
 
@@ -11,7 +11,7 @@ Assignment types:
 
 The home screen shows only the activities that have content this week; new activities appear on the edit screen.
 
-On the edit screen, **שיתוף קישור** shares the full link. For WhatsApp, **יצירת קישור קצר** makes a short link through tny.lv (the full link is sent to that service), valid for 7 days; tap again to share it. The Import box needs the full link.
+On the edit screen, **שיתוף קישור** shares the full link. For WhatsApp, **יצירת קישור קצר** makes a short link through tny.lv (the full link is sent to that service), valid for 7 days; tap again to share it. The Import box needs the full link. The short link is made by a small Vercel function (`api/shorten.ts`, included in the free Hobby plan), so it works only on the deployed site and previews, not with `npm run dev`.
 
 On the edit screen, **הגדרות** sets how long the popup after a word stays when it shows a right/wrong pair — a letter pair in Confusing Letters or a word pair in Choose Word (1.5–8 seconds, default 3). Every other popup keeps its normal length. It's saved on that device only.
 
@@ -87,7 +87,7 @@ Automated tests can't cover these:
 - [ ] Tap and drag both work; the page doesn't scroll while dragging.
 - [ ] Edit screen → הגדרות: the time the letter pair stays after a word feels right for the kid.
 - [ ] Share link with a full week of all four activities (20 words each, 4 options per Choose Word line, 30 three-part Arabic cards with harakat at the 20-character limit), sent and opened from WhatsApp, loads all four.
-- [ ] Edit screen → "יצירת קישור קצר" on the live site (iPhone and Android): the short link and its expiry date appear, "שיתוף הקישור הקצר" opens the share sheet, and the link opened from WhatsApp loads the content. If it says it couldn't make the link, tny.lv may be blocking requests from other sites (CORS).
+- [ ] Edit screen → "יצירת קישור קצר" on the live site (iPhone and Android): the short link and its expiry date appear, "שיתוף הקישור הקצר" opens the share sheet, and the link opened from WhatsApp loads the content. If it says it couldn't make the link, check the function's log in Vercel (Project → Logs, `/api/shorten`).
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
 - [ ] In each game, mid-round: "מתחילים מהתחלה" on the start screen goes back to word 1 and keeps the total points; a quick tap on "ממשיכים" never hits it by mistake.

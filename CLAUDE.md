@@ -1,6 +1,6 @@
 # Balagan (בלגן) — project rules
 
-Hebrew writing practice — and words in another language (Arabic, English) — for one kid (up to age 10) on a phone. A parent pastes the week's content; the kid plays. Static site on Vercel, no server, no database.
+Hebrew writing practice — and words in another language (Arabic, English) — for one kid (up to age 10) on a phone. A parent pastes the week's content; the kid plays. Static site on Vercel, no database; one small Vercel function (`api/shorten.ts`) only for short links.
 
 Each rule has a one-line **why**. Don't change a rule without understanding its reason; if a rule must change, update this file in the same change.
 
@@ -17,7 +17,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 
 | Rule | Why |
 |---|---|
-| No server or database; data lives in `localStorage` (`src/platform/storage.ts`) | Simple, free, private |
+| No database; data lives in `localStorage` (`src/platform/storage.ts`). The only server code is the Vercel function `api/shorten.ts` (free Hobby plan, no VPS), which keeps nothing | Simple, free, private; browsers block the app from reading the shortening service's answer (CORS), so that one call has to come from the server |
 | Content moves between devices only via the share link hash `#import=1.<base64url>`, or a short link that redirects to it (see "Short share link") | The hash is never sent to the app's server; only a short link the parent asks for leaves the device |
 | Keep the Import box on the edit screen | On iPhone, an installed home-screen app has separate storage and can't receive links directly |
 | TypeScript + Vite, no UI framework | A few screens; type checks catch mistakes before the phone |
@@ -187,9 +187,11 @@ Flashcards for words in another language, in two directions. A different kind of
 
 | Rule | Why |
 |---|---|
-| The app talks to a shortener only through `ShortenerProvider` (`src/platform/shortener.ts`); `SHORTENER` picks the service, now tny.lv (`src/platform/shorteners/tny-lv.ts`) | The service can be replaced without touching the screens |
+| The app talks to a shortener only through `ShortenerProvider` (`src/platform/shortener.ts`). The app's provider (`viaServer`) posts `{ url, expiresAt }` to `/api/shorten`; the function (`handleShorten` in `src/platform/shorten-server.ts`) calls the service. `createService` in `src/platform/shorteners/service.ts` picks the service for both, now tny.lv (`tny-lv.ts`) | Switching services is one new provider and one line, without touching the screens or the function |
+| The function shortens only this site's own share links: https, the request's own host, a hash starting with `#import=`, at most 64k characters, an expiry in the future and at most 8 days away; the app checks the answer again (https, the service's own link) | Nobody can use the function to hide other links behind the service, and a bad answer never reaches the parent's message |
+| Imports in the function's files (`api/`, `shorten-server.ts`, `shorteners/service.ts`, `tny-lv.ts`) end in `.js` or are `import type` only | Vercel runs the function as an ES module without bundling, and Node needs the extension |
 | tny.lv has no public API: the provider reads the nonce from its home page and posts what its web form posts (`POST /?ajax=1`, `af_expiry_ts` in Unix seconds), reusing the nonce and fetching a fresh one once when it stops working | Undocumented, so it can break; the full link keeps working when it does |
-| Only an https link on the service's own host is accepted from the answer | A broken or hostile answer must not put another site's link in the parent's message |
+| Only an https link on the service's own host is accepted from the service's answer | A broken or hostile answer must not put another site's link in the parent's message |
 | The link sent to the service gets `?s=<time in base 36>` (`uniqueLink`; the app ignores the query), and a "fail" answer is never used | Services return the existing short link for a link they already have, with its old expiry; every request must make a new link so the date shown is true |
 | A short link finishing after the parent left the edit screen is dropped; a ready link within an hour of expiring is not shared ("הקישור הקצר כבר לא בתוקף") | Messages belong to their screen; a screen left open for days must not share a dead link |
 | The short link expires 7 days after it is made (`SHORT_LINK_DAYS`); the screen shows the date and time it stops working, not "7 days" | Weekly content; a forwarded message must still say when the link dies |
