@@ -104,6 +104,10 @@ export function nakdanSection(): HTMLElement {
 
 let sheetCount = 0;
 
+/** Two options per row fit at 36px on a 360px phone up to this many letters (with the ✓). */
+export const NK_TWO_COLUMN_MAX_LETTERS = 5;
+const letterCount = (text: string) => (text.match(/[\u05D0-\u05EA]/g) ?? []).length;
+
 /**
  * Full-screen sheet with one row per word. `chosen` is updated in place, so the
  * choices are still there when the sheet is opened again for the same words.
@@ -194,7 +198,12 @@ function wordRow(result: NakdanWord, i: number, chosen: number[], sheetId: strin
     );
   }
   const name = `${sheetId}-w${n}`;
-  const group = h('div', { class: 'seg nk-options', role: 'radiogroup', 'aria-label': `מילה ${n}: ${result.word}` });
+  const wide = letterCount(result.word) > NK_TWO_COLUMN_MAX_LETTERS;
+  const group = h('div', {
+    class: wide ? 'seg nk-options nk-wide' : 'seg nk-options',
+    role: 'radiogroup',
+    'aria-label': `מילה ${n}: ${result.word}`,
+  });
   result.options.forEach((option, j) => {
     const input = h('input', {
       type: 'radio',

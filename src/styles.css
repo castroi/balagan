@@ -604,16 +604,21 @@ body:has(.screen.edit) {
 
 .nk-options .seg-option {
   flex: 0 1 calc(50% - 4px);
-  min-height: 56px;
+  min-height: 76px;
+}
+
+/* A word longer than NK_TWO_COLUMN_MAX_LETTERS gets one option per row, so it stays big. */
+.nk-options.nk-wide .seg-option {
+  flex-basis: 100%;
 }
 
 .nk-options .seg-option span,
 .nk-single {
-  gap: 6px;
+  gap: 8px;
   font-family: var(--tile-font);
-  font-size: 26px;
+  font-size: 36px;
   font-weight: 500;
-  line-height: 1.9;
+  line-height: 2;
 }
 
 .nk-options .seg-option span .icon,
@@ -633,7 +638,7 @@ body:has(.screen.edit) {
 
 .nk-single {
   margin: 0;
-  min-height: 56px;
+  min-height: 76px;
   display: flex;
   align-items: center;
   justify-content: center;
