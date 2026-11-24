@@ -1,4 +1,4 @@
-import { describeChar, normalizeText } from '../core/unicode';
+import { describeChar, MARK_CLASS, normalizeText } from '../core/unicode';
 
 /**
  * Niqqud suggestions from Dicta's Nakdan (https://nakdan.dicta.org.il), for the
@@ -23,7 +23,8 @@ export interface NakdanWord {
 
 export type NakdanInput = { words: string[]; errors: [] } | { words: null; errors: string[] };
 
-const MARKS = /[ְ-ׇֽֿׁׂׅׄ]/g;
+// Niqqud and points only (the same set as the editor's rules; not the maqaf).
+const MARKS = new RegExp(`[${MARK_CLASS}]`, 'g');
 const METEG = /ֽ/g;
 const HEBREW_WORD = /^[א-ת][א-ת׳]*$/;
 
@@ -86,6 +87,10 @@ export async function fetchNakdan(
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
       body: nakdanRequestBody(words),
       signal: controller.signal,
+      // Only the words leave the device: no cookies, no page address, nothing cached.
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      cache: 'no-store',
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return readNakdan(words, (await response.json()) as unknown);
@@ -139,8 +144,9 @@ const tokenText = (t: DictaToken): string =>
 /**
  * A word's options, best first, at most `NAKDAN_MAX_OPTIONS`: Dicta's own order
  * by level (1 = its pick), each spelling once (without "|" prefix markers and
- * the meteg), only with niqqud. Forms marked as Tanakh-only or poetry-only, and
- * spellings with other letters than typed, are left out unless nothing else is left.
+ * the meteg), only with niqqud and only with exactly the letters typed — Dicta's
+ * answer is untrusted, and a spelling app must never offer another spelling.
+ * Forms marked as Tanakh-only or poetry-only are left out unless nothing else is left.
  */
 export function wordOptions(word: string, token: DictaToken): string[] {
   const raw = Array.isArray(token.nakdan?.options) ? (token.nakdan.options as DictaOption[]) : [];
@@ -155,9 +161,8 @@ export function wordOptions(word: string, token: DictaToken): string[] {
     .sort((a, b) => a.level - b.level || a.i - b.i);
 
   const sameLetters = options.filter((o) => stripMarks(o.text) === word);
-  const pool = sameLetters.length > 0 ? sameLetters : options;
-  const common = pool.filter((o) => !o.rare);
-  const chosen = common.length > 0 ? common : pool;
+  const common = sameLetters.filter((o) => !o.rare);
+  const chosen = common.length > 0 ? common : sameLetters;
 
   const unique: string[] = [];
   for (const o of chosen) {

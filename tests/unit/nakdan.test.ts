@@ -89,17 +89,24 @@ describe('wordOptions', () => {
     expect(NAKDAN_MAX_OPTIONS).toBe(4);
   });
 
-  it('leaves out spellings with other letters than typed, unless nothing else is left', () => {
+  it('never offers a spelling with other letters than typed, even when nothing else is left', () => {
     const both = token('עדיין', [
       { w: 'עֲדַיִן', levelChoice: 1 },
       { w: 'עֲדַיִין', levelChoice: 2 },
     ]);
     expect(wordOptions('עדיין', both)).toEqual(nfc(['עֲדַיִין']));
-    expect(wordOptions('עדיין', token('עדיין', [{ w: 'עֲדַיִן', levelChoice: 1 }]))).toEqual(nfc(['עֲדַיִן']));
+    expect(wordOptions('עדיין', token('עדיין', [{ w: 'עֲדַיִן', levelChoice: 1 }]))).toEqual([]);
+    // A broken or hostile answer: other letters, Latin text or markup with one mark.
+    const hostile = token('עדיין', [{ w: 'אָדַיִין', levelChoice: 1 }, { w: '<img src=x>ַ', levelChoice: 1 }]);
+    expect(wordOptions('עדיין', hostile)).toEqual([]);
   });
 
   it('keeps Tanakh-only forms when they are all there is', () => {
     expect(wordOptions('עד', token('עד', [{ w: 'עֹד', levelChoice: 3, fTanakh: true }]))).toEqual(nfc(['עֹד']));
+  });
+
+  it('does not count the maqaf as niqqud', () => {
+    expect(wordOptions('עד', token('עד', [{ w: 'עד־', levelChoice: 1 }]))).toEqual([]);
   });
 
   it('gives no options for an unknown word or a broken answer', () => {
@@ -164,6 +171,7 @@ describe('fetchNakdan', () => {
     expect(results[0].options).toEqual(nfc(['עַד', 'עֵד']));
     expect(calls[0][0]).toBe(NAKDAN_URL);
     expect(calls[0][1].headers).toEqual({ 'Content-Type': 'text/plain;charset=UTF-8' });
+    expect(calls[0][1]).toMatchObject({ credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store' });
     expect(JSON.parse(calls[0][1].body as string)).toMatchObject({ task: 'nakdan', genre: 'modern', data: 'עד\nעכשיו' });
     expect(calls[0][1].body).toBe(nakdanRequestBody(['עד', 'עכשיו']));
   });
