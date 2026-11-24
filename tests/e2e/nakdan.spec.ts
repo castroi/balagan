@@ -7,6 +7,12 @@ const token = (w: string, options: { w: string; levelChoice: number; fTanakh?: b
   sep: false,
   nakdan: { word: w, options },
 });
+// Playwright can't fake requests that pass through the service worker (WebKit).
+test.use({ serviceWorkers: 'block' });
+
+// The real Dicta answers a plain POST with this header; without it the browser hides the answer.
+const CORS = { 'Access-Control-Allow-Origin': '*' };
+
 const lineBreak = { str: '\n', sep: true, nakdan: { word: '\n', options: [] } };
 
 /** A fake Dicta answer for "עד / עכשיו / בלגנון"; returns the request bodies it received. */
@@ -15,7 +21,7 @@ async function fakeDicta(page: Page, status = 200) {
   await page.route(/dicta\.org\.il\/api$/, async (route) => {
     const request = route.request();
     asked.push({ type: request.headers()['content-type'], data: JSON.parse(request.postData() ?? '{}').data });
-    if (status !== 200) return route.fulfill({ status, body: 'busy' });
+    if (status !== 200) return route.fulfill({ status, headers: CORS, body: 'busy' });
     const data = [
       token('עד', [
         { w: 'עַד', levelChoice: 1 },
@@ -27,7 +33,7 @@ async function fakeDicta(page: Page, status = 200) {
       lineBreak,
       token('בלגנון', []),
     ];
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data }) });
+    await route.fulfill({ contentType: 'application/json', headers: CORS, body: JSON.stringify({ data }) });
   });
   return asked;
 }
