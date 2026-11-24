@@ -11,6 +11,7 @@ import { LANGUAGES, type ForeignLang } from '../core/scripts';
 import { h, icon } from './dom';
 import { ICONS } from './icons';
 import { announce, confirmDialog, toast } from './dialog';
+import { nakdanSection } from './nakdan';
 
 interface Section {
   el: HTMLElement;
@@ -67,6 +68,7 @@ export function renderEdit(container: HTMLElement, app: App): void {
       ),
       readOnlyBanner,
       voiceBanner,
+      nakdanSection(),
       ...sections.map((s) => s.el),
       settingsSection(app),
       shareSection(app, sections),

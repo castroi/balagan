@@ -15,7 +15,7 @@ export const GERESH = '׳';
 
 const LETTER = '\\u05D0-\\u05EA';
 // Niqqud and points: sheva…qubuts, dagesh, meteg, rafe, shin/sin dots, qamats qatan, etc.
-const MARK_CLASS = '\\u05B0-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7';
+export const MARK_CLASS = '\\u05B0-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7';
 const MARK = new RegExp(`[${MARK_CLASS}]`, 'g');
 
 const TILE = new RegExp(`[${LETTER}][${MARK_CLASS}${GERESH}]*`, 'y');
