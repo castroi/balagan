@@ -89,6 +89,7 @@ Automated tests can't cover these:
 - [ ] Share link with a full week of all four activities (20 words each, 4 options per Choose Word line, 30 three-part Arabic cards with harakat at the 20-character limit), sent and opened from WhatsApp, loads all four.
 - [ ] Preview deploy: the function runs. In Vercel → the deployment → Functions, `api/shorten` is listed, and after one tap on "יצירת קישור קצר" its log shows no error (e.g. no `ERR_MODULE_NOT_FOUND`).
 - [ ] Edit screen → "יצירת קישור קצר" on the live site (iPhone and Android): the short link and its expiry date appear, "שיתוף הקישור הקצר" opens the share sheet, and the link opened from WhatsApp loads the content. If it says it couldn't make the link, check the function's log in Vercel (Project → Logs, `/api/shorten`).
+- [ ] Edit screen → "הוספת ניקוד" on the live site (iPhone and Android): type 5–10 plain words, tap "ניקוד", the sheet shows the options with readable niqqud, a choice can be changed, "העתקה" copies them and they paste into an activity. If it fails, check whether Dicta changed its address (`NAKDAN_URL` in `src/platform/nakdan.ts`).
 - [ ] Installed to the home screen: paste the share link into "קיבלתם קישור?" on the edit screen and the words load into the installed app.
 - [ ] Close the app mid-round and reopen: it continues from the same word, with no extra points.
 - [ ] In each game, mid-round: "מתחילים מהתחלה" on the start screen goes back to word 1 and keeps the total points; a quick tap on "ממשיכים" never hits it by mistake.

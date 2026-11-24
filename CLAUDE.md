@@ -30,7 +30,7 @@ Each rule has a one-line **why**. Don't change a rule without understanding its 
 | Device text-to-speech only; no recordings in v1. `speak(text, lang)` speaks Hebrew, Arabic or English (`src/platform/tts.ts`) | Recordings can't travel in a link |
 | A foreign word is never read by another language's voice: with no voice for it the word stays silent | A wrong voice teaches a wrong sound |
 | Voice-test buttons and a "no Hebrew voice" warning on the edit screen; a "no Arabic/English voice" warning only for languages in the list | Voice quality varies by phone; Android often lacks the Arabic voice pack |
-| Practice only — nothing is sent anywhere, except the full share link, through the app's own function (`api/shorten.ts`) to the link shortener, when the parent taps "יצירת קישור קצר" | No accounts, no tracking; a spelling list is fine to send once the parent chooses it (the owner's decision) |
+| Practice only — nothing is sent anywhere, except two things the parent taps for on the edit screen: the full share link, through the app's own function (`api/shorten.ts`) to the link shortener ("יצירת קישור קצר"), and the words typed in "הוספת ניקוד", straight from the browser to Dicta ("ניקוד") | No accounts, no tracking; a spelling list is fine to send once the parent chooses it (the owner's decision) |
 | Data saved by a newer app version makes the app read-only (no save, import, Clear or points — not even in memory); it says to refresh | An old cached version opened offline must not wipe the week's words or show content that isn't saved |
 | Messages (toasts) belong to their screen and disappear when the screen changes | An Undo shown on another screen would act on the wrong thing |
 | Device settings (e.g. how long the popup with a right/wrong pair stays) live under their own key `hebrew-practice:settings` (`src/platform/settings.ts`), never in the share link; read-only mode blocks changing them | Older app versions rewrite the main saved data and would drop new fields; settings belong to the device, not to the week's content |
@@ -203,6 +203,23 @@ Flashcards for words in another language, in two directions. A different kind of
 | The short link and its state live in memory only, never saved | Nothing new in storage or in the share link |
 | A short link pasted into the Import box gets a message asking for the full link | The app can't follow the redirect (another site), and opening it removes the hash from the address bar |
 | The full-link button stays first and unchanged | The Import box needs it; it works with no network service |
+
+## Niqqud helper (הוספת ניקוד) — decisions
+
+A parent-only tool on the edit screen, not an activity: plain words in, Dicta's niqqud suggestions out, copied by the parent into any activity.
+
+| Rule | Why |
+|---|---|
+| Its own panel first on the edit screen, not inside an activity; its text is never saved, isn't in the share link and doesn't count as unsaved changes | It's the first step of typing the week's words; four copies in the activities would suggest "insert here" |
+| One plain word per line, Hebrew letters and geresh only, up to 20 words (`parseNakdanInput`); niqqud typed anyway is removed before sending | Dicta offers all its options only for a bare word; the same cap as a word list |
+| The browser posts to Dicta itself (`NAKDAN_URL` in `src/platform/nakdan.ts`) as `text/plain`, no server function | Dicta answers no CORS preflight but lets the browser read a plain POST's answer (tested from the live site, Nov 2026); no server code to run |
+| Dicta has no documented API: the request posts what its site posts; the URL lives in one constant | It has changed before (2-0, 5-1, u1-0); if it breaks, only that file changes |
+| The panel says the words go to Dicta, next to the button; nothing is sent before the tap | The parent decides what leaves the phone |
+| Options per word, best first, at most 4 (`wordOptions`): Dicta's level order, "\|" prefix markers and the meteg removed, each spelling once, only with niqqud; forms marked Tanakh-only or poetry-only and spellings with other letters than typed are dropped, unless nothing else is left | Dicta returns many grammar readings of the same spelling; a spelling app must not change the letters the parent typed |
+| Results in a full-screen sheet (`role="dialog"`, page inert, Escape closes, focus on its title and back to the button); input stays in the page | A textarea in a fixed overlay misbehaves with the iPhone keyboard; 20 rows need their own scroll and a sticky Copy button |
+| Each word with 2+ options: a radio group ("מילה N: …", options "אפשרות N: …"), Dicta's pick preselected and marked ✓, 26px, two per row; one option: plain text with ✓; none: the word as typed with an orange note | Look-alike vowels must be readable; colour is never the only signal |
+| Busy "מנקדים…", 8 s timeout, offline or failure in orange with "לנסות שוב" (as the short-link button); the answer is kept while the words stay the same, with the choices | No double requests; closing the sheet to check the words loses nothing |
+| "העתקה" copies the chosen words, one per line, closes the sheet and shows a toast; if the clipboard refuses, the text is shown selected in the sheet | The parent pastes into whichever activity; copy only, no "insert into activity" (the owner's choice) |
 
 ## Not done on purpose (possible later)
 
